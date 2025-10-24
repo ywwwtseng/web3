@@ -1,5 +1,6 @@
 import { test, expect, describe } from 'bun:test';
-import { Transaction, solana, ethers, RPC_URL } from '..';
+import crypto from 'crypto';
+import { Transaction, solana, ethers, RPC_URL, KeyVaultService } from '..';
 import { wallet } from '../config/wallet';
 
 describe('Transaction', () => {
@@ -164,7 +165,7 @@ describe('Transaction', () => {
         '295q29VLXDbL4TkvNmxSqfX6i1B1nQhXu4U9ZZc2xkFp5U1cniPmGDfugaMNpGMyJPk4fPGd7e9PJZjpJU8KjK6K',
     });
     const gasFee = Transaction.getGasFee(transaction);
-    expect(gasFee).toBeGreaterThan(0);
+    expect(BigInt(gasFee)).toBeGreaterThan(0n);
   });
 
   test('get EVM Gas Fee', async () => {
@@ -174,7 +175,7 @@ describe('Transaction', () => {
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa'
     );
     const gasFee = Transaction.getGasFee(receipt);
-    expect(gasFee).toBeGreaterThan(0);
+    expect(BigInt(gasFee)).toBeGreaterThan(0n);
   });
 
   test('get Solana Transaction Block Time', async () => {
@@ -199,5 +200,28 @@ describe('Transaction', () => {
     );
     const blockTime = await Transaction.getBlockTime(receipt, RPC_URL.BINANCE);
     expect(blockTime).toBeGreaterThan(0);
+  });
+
+  test('estimate EVM Gas Fee', async () => {
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const gasPrice = await Transaction.evm.estimateFee(provider);
+    expect(BigInt(gasPrice)).toBeGreaterThan(0n);
+  });
+
+  test('estimate EVM Gas Fee with params', async () => {
+    const keyVaultService = new KeyVaultService(crypto.randomBytes(32));
+    const wallet = keyVaultService.evm.recover(
+      keyVaultService.evm.generate().privateKeyEncrypted
+    );
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const signer = new ethers.Wallet(wallet.privateKey, provider);
+
+    const gasPrice = await Transaction.evm.estimateFee(provider, {
+      tokenAddress: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      signer,
+      destination: '0x6d5e3A9a24171b206a781707Fe90B565e67dCD6C',
+      amount: '0',
+    });
+    expect(BigInt(gasPrice)).toBeGreaterThan(0n);
   });
 });

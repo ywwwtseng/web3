@@ -1,5 +1,10 @@
 import { Connection, type ParsedTransactionWithMeta } from '@solana/web3.js';
-import { JsonRpcProvider, type TransactionReceipt } from 'ethers';
+import {
+  JsonRpcProvider,
+  type TransactionReceipt,
+  Contract,
+  Wallet,
+} from 'ethers';
 import {
   createTransaction,
   CreateSolanaTransactionParams,
@@ -8,6 +13,7 @@ import { decodeTransfer } from '../solana/decodeTransfer';
 import { getTransfers } from '../solana/getTransfers';
 import { getTransfer } from '../evm/getTransfer';
 import type { Transfer } from '../types';
+import { ERC20_ABI } from '../abi/ERC20_ABI';
 
 export class Transaction {
   static get solana() {
@@ -51,7 +57,7 @@ export class Transaction {
         }
       },
       getGasFee: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => {
-        return parsedTransactionWithMeta.meta?.fee ?? 0;
+        return (parsedTransactionWithMeta.meta?.fee ?? 0).toString();
       },
       getBlockTime: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => {
         return parsedTransactionWithMeta.blockTime;
@@ -89,7 +95,7 @@ export class Transaction {
         return getTransfer({ receipt, transaction });
       },
       getGasFee: (receipt: TransactionReceipt) => {
-        return Number(receipt.gasUsed) * Number(receipt.gasPrice);
+        return (receipt.gasUsed * receipt.gasPrice).toString();
       },
       getBlockTime: async (
         provider: JsonRpcProvider,
@@ -97,6 +103,37 @@ export class Transaction {
       ) => {
         const block = await provider.getBlock(receipt.blockNumber);
         return block.timestamp;
+      },
+      estimateFee: async (
+        provider: JsonRpcProvider,
+        params?: {
+          tokenAddress: string;
+          signer: Wallet;
+          destination: string;
+          amount: string | bigint;
+        }
+      ) => {
+        const feeData = await provider.getFeeData();
+
+        if (!params) {
+          const gasLimit = 21000n;
+          return (feeData.gasPrice * gasLimit).toString();
+        } else {
+          const contract = new Contract(
+            params.tokenAddress,
+            ERC20_ABI,
+            params.signer
+          );
+
+          const gasLimit = await contract.transfer.estimateGas(
+            params.destination,
+            typeof params.amount === 'string'
+              ? BigInt(params.amount)
+              : params.amount
+          );
+
+          return (feeData.gasPrice * gasLimit).toString();
+        }
       },
     };
   }

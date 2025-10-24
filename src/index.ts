@@ -8,3 +8,4 @@ export * from './Token/Token';
 export * from './utils/rpc';
 export * from './constants';
 export * from './types';
+export * from './abi';

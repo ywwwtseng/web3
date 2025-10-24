@@ -77,17 +77,23 @@ declare class Transaction {
         create: (connection: Connection, params: CreateSolanaTransactionParams) => Promise<_solana_web3_js.Transaction>;
         decodeTransfer: (connection: Connection, base64: string) => Promise<Transfer>;
         getTransfers: (connection: Connection, src: string | ParsedTransactionWithMeta) => Promise<Transfer[]>;
-        getGasFee: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => number;
+        getGasFee: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => string;
         getBlockTime: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => number;
     };
     static get evm(): {
         get: (provider: JsonRpcProvider, txHash: string) => Promise<ethers.TransactionResponse>;
         getReceipt: (provider: JsonRpcProvider, txHash: string) => Promise<TransactionReceipt>;
         getTransfer: (provider: JsonRpcProvider, src: string | TransactionReceipt) => Promise<Transfer>;
-        getGasFee: (receipt: TransactionReceipt) => number;
+        getGasFee: (receipt: TransactionReceipt) => string;
         getBlockTime: (provider: JsonRpcProvider, receipt: TransactionReceipt) => Promise<number>;
+        estimateFee: (provider: JsonRpcProvider, params?: {
+            tokenAddress: string;
+            signer: Wallet;
+            destination: string;
+            amount: string | bigint;
+        }) => Promise<string>;
     };
-    static getGasFee(src: ParsedTransactionWithMeta | TransactionReceipt): number;
+    static getGasFee(src: ParsedTransactionWithMeta | TransactionReceipt): string;
     static getBlockTime(src: ParsedTransactionWithMeta | TransactionReceipt, rpcUrl: string): Promise<number>;
     static getTransfer(src: string | ParsedTransactionWithMeta | TransactionReceipt, params: {
         rpcUrl: string;
@@ -145,4 +151,6 @@ declare const CHAIN_ID: {
     ETH: number;
 };
 
-export { Balance, CHAIN_ID, KeyPair, KeyVaultService, NETWORK, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, getRpcUrl, getSignaturesForAddress };
+declare const ERC20_ABI: string[];
+
+export { Balance, CHAIN_ID, ERC20_ABI, KeyPair, KeyVaultService, NETWORK, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, getRpcUrl, getSignaturesForAddress };

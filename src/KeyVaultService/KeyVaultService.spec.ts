@@ -5,9 +5,10 @@ import { KeyVaultService } from '..';
 describe('KeyVaultService', () => {
   test('solana generate and recover', () => {
     const keyVaultService = new KeyVaultService(crypto.randomBytes(32));
-
     const wallet = keyVaultService.solana.generate();
-    const recovered = keyVaultService.solana.recover(wallet.privateKeyEncrypted);
+    const recovered = keyVaultService.solana.recover(
+      wallet.privateKeyEncrypted
+    );
 
     expect(wallet.publicKey.toBase58()).toBe(recovered.publicKey.toBase58());
 

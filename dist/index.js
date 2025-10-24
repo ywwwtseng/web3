@@ -128,6 +128,7 @@ var ERC20_ABI = [
   "function name() view returns (string)",
   "function decimals() view returns (uint8)",
   "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 value) returns (bool)",
   "event Transfer(address indexed from, address indexed to, uint256 value)"
 ];
 
@@ -174,7 +175,10 @@ var Balance = class {
 
 // src/Transaction/Transaction.ts
 import { Connection as Connection6 } from "@solana/web3.js";
-import { JsonRpcProvider as JsonRpcProvider2 } from "ethers";
+import {
+  JsonRpcProvider as JsonRpcProvider2,
+  Contract as Contract2
+} from "ethers";
 
 // src/solana/createTransaction.ts
 import {
@@ -510,7 +514,7 @@ var Transaction3 = class _Transaction {
         }
       },
       getGasFee: (parsedTransactionWithMeta) => {
-        return parsedTransactionWithMeta.meta?.fee ?? 0;
+        return (parsedTransactionWithMeta.meta?.fee ?? 0).toString();
       },
       getBlockTime: (parsedTransactionWithMeta) => {
         return parsedTransactionWithMeta.blockTime;
@@ -537,11 +541,29 @@ var Transaction3 = class _Transaction {
         return getTransfer({ receipt, transaction });
       },
       getGasFee: (receipt) => {
-        return Number(receipt.gasUsed) * Number(receipt.gasPrice);
+        return (receipt.gasUsed * receipt.gasPrice).toString();
       },
       getBlockTime: async (provider, receipt) => {
         const block = await provider.getBlock(receipt.blockNumber);
         return block.timestamp;
+      },
+      estimateFee: async (provider, params) => {
+        const feeData = await provider.getFeeData();
+        if (!params) {
+          const gasLimit = 21000n;
+          return (feeData.gasPrice * gasLimit).toString();
+        } else {
+          const contract = new Contract2(
+            params.tokenAddress,
+            ERC20_ABI,
+            params.signer
+          );
+          const gasLimit = await contract.transfer.estimateGas(
+            params.destination,
+            typeof params.amount === "string" ? BigInt(params.amount) : params.amount
+          );
+          return (feeData.gasPrice * gasLimit).toString();
+        }
       }
     };
   }
@@ -582,7 +604,7 @@ var Transaction3 = class _Transaction {
 };
 
 // src/Token/Token.ts
-import { JsonRpcProvider as JsonRpcProvider3, Contract as Contract2 } from "ethers";
+import { JsonRpcProvider as JsonRpcProvider3, Contract as Contract3 } from "ethers";
 
 // src/utils/loaders.ts
 async function loadImage(url) {
@@ -649,7 +671,7 @@ var Token = class {
         rpcUrl
       }) => {
         const provider = new JsonRpcProvider3(rpcUrl);
-        const contract = new Contract2(address, ERC20_ABI, provider);
+        const contract = new Contract3(address, ERC20_ABI, provider);
         const name = await contract.name();
         const symbol = await contract.symbol();
         const decimals = await contract.decimals();
@@ -716,6 +738,7 @@ function getRpcUrl(network) {
 export {
   Balance,
   CHAIN_ID,
+  ERC20_ABI,
   KeyPair,
   KeyVaultService,
   NETWORK,
