@@ -1,7 +1,7 @@
 import { JsonRpcProvider, Contract } from 'ethers';
 import { ERC20_ABI } from '../abi/ERC20_ABI';
 import { loadImage } from '../utils/loaders';
-import { NETWORK } from '../constants';
+import { NETWORKS } from '../constants';
 
 export interface TokenInfo {
   name: string;
@@ -82,7 +82,7 @@ export class Token {
         };
       },
       getIcon: async (network: string, address: string) => {
-        if (network === NETWORK.BSC) {
+        if (network === NETWORKS.BSC) {
           const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
           const blob = await loadImage(url);
 
@@ -116,7 +116,7 @@ export class Token {
     network: string;
     rpcUrl: string;
   }): Promise<TokenInfo> {
-    if (network === NETWORK.SOLANA) {
+    if (network === NETWORKS.SOLANA) {
       return await this.solana.getInfo(address);
     } else {
       return await this.evm.getInfo({ rpcUrl, network, address });

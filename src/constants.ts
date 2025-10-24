@@ -4,16 +4,25 @@ export const RPC_URL = {
   SOLANA_MAIN: 'https://api.mainnet-beta.solana.com',
 };
 
-export const NETWORK = {
+export const NETWORKS = {
   SOLANA: 'solana',
   BSC: 'bsc',
   ETH: 'ethereum',
   TON: 'ton',
-  TRX: 'tron',
+  TRON: 'tron',
   BTC: 'bitcoin',
 };
 
-export const CHAIN_ID = {
+export const NATIVE_TOKEN_POOL_PAIRS = {
+  SOLANA: 'SOLUSDT',
+  BSC: 'BNBUSDT',
+  ETH: 'ETHUSDT',
+  TON: 'TONUSDT',
+  TRON: 'TRXUSDT',
+  BTC: 'BTCUSDT',
+};
+
+export const CHAIN_IDS = {
   BSC: 56,
   ETH: 1,
 };
