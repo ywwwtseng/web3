@@ -625,15 +625,23 @@ var RPC_URL = {
   SOLANA_DEV: "https://api.devnet.solana.com",
   SOLANA_MAIN: "https://api.mainnet-beta.solana.com"
 };
-var NETWORK = {
+var NETWORKS = {
   SOLANA: "solana",
   BSC: "bsc",
   ETH: "ethereum",
   TON: "ton",
-  TRX: "tron",
+  TRON: "tron",
   BTC: "bitcoin"
 };
-var CHAIN_ID = {
+var NATIVE_TOKEN_POOL_PAIRS = {
+  SOLANA: "SOLUSDT",
+  BSC: "BNBUSDT",
+  ETH: "ETHUSDT",
+  TON: "TONUSDT",
+  TRON: "TRXUSDT",
+  BTC: "BTCUSDT"
+};
+var CHAIN_IDS = {
   BSC: 56,
   ETH: 1
 };
@@ -690,7 +698,7 @@ var Token = class {
         };
       },
       getIcon: async (network, address) => {
-        if (network === NETWORK.BSC) {
+        if (network === NETWORKS.BSC) {
           const url2 = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
           const blob2 = await loadImage(url2);
           return {
@@ -699,7 +707,7 @@ var Token = class {
           };
         }
         const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/ethereum/contract/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48${address}`
+          `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
         );
         const result = await res.json();
         const url = result.image.small;
@@ -716,7 +724,7 @@ var Token = class {
     network,
     rpcUrl
   }) {
-    if (network === NETWORK.SOLANA) {
+    if (network === NETWORKS.SOLANA) {
       return await this.solana.getInfo(address);
     } else {
       return await this.evm.getInfo({ rpcUrl, network, address });
@@ -727,9 +735,9 @@ var Token = class {
 // src/utils/rpc.ts
 function getRpcUrl(network) {
   switch (network) {
-    case NETWORK.SOLANA:
+    case NETWORKS.SOLANA:
       return RPC_URL.SOLANA_DEV;
-    case NETWORK.BSC:
+    case NETWORKS.BSC:
       return RPC_URL.BINANCE;
     default:
       throw new Error(`Network ${network} not supported`);
@@ -737,11 +745,12 @@ function getRpcUrl(network) {
 }
 export {
   Balance,
-  CHAIN_ID,
+  CHAIN_IDS,
   ERC20_ABI,
   KeyPair,
   KeyVaultService,
-  NETWORK,
+  NATIVE_TOKEN_POOL_PAIRS,
+  NETWORKS,
   RPC_URL,
   Token,
   Transaction3 as Transaction,

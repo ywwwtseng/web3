@@ -138,19 +138,27 @@ declare const RPC_URL: {
     SOLANA_DEV: string;
     SOLANA_MAIN: string;
 };
-declare const NETWORK: {
+declare const NETWORKS: {
     SOLANA: string;
     BSC: string;
     ETH: string;
     TON: string;
-    TRX: string;
+    TRON: string;
     BTC: string;
 };
-declare const CHAIN_ID: {
+declare const NATIVE_TOKEN_POOL_PAIRS: {
+    SOLANA: string;
+    BSC: string;
+    ETH: string;
+    TON: string;
+    TRON: string;
+    BTC: string;
+};
+declare const CHAIN_IDS: {
     BSC: number;
     ETH: number;
 };
 
 declare const ERC20_ABI: string[];
 
-export { Balance, CHAIN_ID, ERC20_ABI, KeyPair, KeyVaultService, NETWORK, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, getRpcUrl, getSignaturesForAddress };
+export { Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, getRpcUrl, getSignaturesForAddress };
