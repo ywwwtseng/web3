@@ -1,5 +1,5 @@
 export const RPC_URL = {
-  BINANCE: 'https://bsc-dataseed.binance.org/',
+  BSC: 'https://bsc-dataseed.binance.org/',
   SOLANA_DEV: 'https://api.devnet.solana.com',
   SOLANA_MAIN: 'https://api.mainnet-beta.solana.com',
 };

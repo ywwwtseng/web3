@@ -135,7 +135,7 @@ declare class Token {
 declare function getRpcUrl(network: string): string;
 
 declare const RPC_URL: {
-    BINANCE: string;
+    BSC: string;
     SOLANA_DEV: string;
     SOLANA_MAIN: string;
 };

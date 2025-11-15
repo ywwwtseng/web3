@@ -14,7 +14,7 @@ describe('Transaction', () => {
   });
 
   test('get EVM Transaction Receipt', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const transaction = await Transaction.evm.getReceipt(
       provider,
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa'
@@ -105,7 +105,7 @@ describe('Transaction', () => {
   });
 
   test('get EVM Transfer', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
 
     const transfer = await Transaction.evm.getTransfer(
       provider,
@@ -144,7 +144,7 @@ describe('Transaction', () => {
     const transfer = await Transaction.getTransfer(
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa',
       {
-        rpcUrl: RPC_URL.BINANCE,
+        rpcUrl: RPC_URL.BSC,
         source: '0x6d5e3A9a24171b206a781707Fe90B565e67dCD6C',
         destination: '0x723324C6EB42a8D417d43699D93Ad0Df6DE2479B',
       }
@@ -169,7 +169,7 @@ describe('Transaction', () => {
   });
 
   test('get EVM Gas Fee', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const receipt = await Transaction.evm.getReceipt(
       provider,
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa'
@@ -193,17 +193,17 @@ describe('Transaction', () => {
   });
 
   test('get EVM Transaction Block Time', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const receipt = await Transaction.evm.getReceipt(
       provider,
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa'
     );
-    const blockTime = await Transaction.getBlockTime(receipt, RPC_URL.BINANCE);
+    const blockTime = await Transaction.getBlockTime(receipt, RPC_URL.BSC);
     expect(blockTime).toBeGreaterThan(0);
   });
 
   test('estimate EVM Gas Fee', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const gasPrice = await Transaction.evm.estimateFee(provider);
     expect(BigInt(gasPrice)).toBeGreaterThan(0n);
   });
@@ -213,7 +213,7 @@ describe('Transaction', () => {
     const wallet = keyVaultService.evm.recover(
       keyVaultService.evm.generate().privateKeyEncrypted
     );
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const signer = new ethers.Wallet(wallet.privateKey, provider);
 
     const gasPrice = await Transaction.evm.estimateFee(provider, {

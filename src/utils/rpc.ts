@@ -5,7 +5,7 @@ export function getRpcUrl(network: string) {
     case NETWORKS.SOLANA:
       return RPC_URL.SOLANA_DEV;
     case NETWORKS.BSC:
-      return RPC_URL.BINANCE;
+      return RPC_URL.BSC;
     default:
       throw new Error(`Network ${network} not supported`);
   }

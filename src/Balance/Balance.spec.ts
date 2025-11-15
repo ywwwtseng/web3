@@ -26,7 +26,7 @@ describe('Balance', () => {
   });
 
   test('BSC Network Balance get BNB balance', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const balance = await Balance.evm.get(provider, {
       address: '0x6d5e3A9a24171b206a781707Fe90B565e67dCD6C',
     });
@@ -35,7 +35,7 @@ describe('Balance', () => {
   });
 
   test('BSC Network Balance get USDC balance', async () => {
-    const provider = new ethers.JsonRpcProvider(RPC_URL.BINANCE);
+    const provider = new ethers.JsonRpcProvider(RPC_URL.BSC);
     const balance = await Balance.evm.get(provider, {
       address: '0x6d5e3A9a24171b206a781707Fe90B565e67dCD6C',
       tokenAddress: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',

@@ -22,7 +22,7 @@ describe('Token', () => {
     const token = await Token.getInfo({
       address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
       network: NETWORKS.BSC,
-      rpcUrl: RPC_URL.BINANCE,
+      rpcUrl: RPC_URL.BSC,
     });
     expect(token).toBeDefined();
     expect(token.name).toBe('USD Coin');

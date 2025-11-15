@@ -621,7 +621,7 @@ async function loadImage(url) {
 
 // src/constants.ts
 var RPC_URL = {
-  BINANCE: "https://bsc-dataseed.binance.org/",
+  BSC: "https://bsc-dataseed.binance.org/",
   SOLANA_DEV: "https://api.devnet.solana.com",
   SOLANA_MAIN: "https://api.mainnet-beta.solana.com"
 };
@@ -755,7 +755,7 @@ function getRpcUrl(network) {
     case NETWORKS.SOLANA:
       return RPC_URL.SOLANA_DEV;
     case NETWORKS.BSC:
-      return RPC_URL.BINANCE;
+      return RPC_URL.BSC;
     default:
       throw new Error(`Network ${network} not supported`);
   }
