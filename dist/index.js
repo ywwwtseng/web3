@@ -666,7 +666,8 @@ var Token = class {
           icon: result[0].icon,
           icon_file: blob ? new File([blob], result[0].name, {
             type: blob.type
-          }) : null
+          }) : null,
+          usdPrice: result[0].usdPrice
         };
       }
     };
@@ -687,6 +688,21 @@ var Token = class {
           throw new Error("message.token_not_found");
         }
         const icon = await this.evm.getIcon(network, address);
+        let usdPrice = null;
+        try {
+          const res = await fetch(
+            `https://api.dexscreener.com/latest/dex/search?q=${address}`
+          );
+          const data = await res.json();
+          if (data.pairs && data.pairs.length > 0) {
+            const mainPair = data.pairs.sort(
+              (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
+            )[0];
+            usdPrice = mainPair.priceUsd ?? null;
+          }
+        } catch (error) {
+          console.error("Dexscreener error:", error);
+        }
         return {
           name,
           symbol,
@@ -694,7 +710,8 @@ var Token = class {
           icon: icon.url,
           icon_file: icon.blob ? new File([icon.blob], name, {
             type: icon.blob.type
-          }) : null
+          }) : null,
+          usdPrice
         };
       },
       getIcon: async (network, address) => {

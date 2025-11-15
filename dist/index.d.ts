@@ -108,6 +108,7 @@ interface TokenInfo {
     decimals: number;
     icon: string;
     icon_file?: File;
+    usdPrice: string | null;
 }
 declare class Token {
     static get solana(): {

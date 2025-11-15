@@ -9,6 +9,7 @@ export interface TokenInfo {
   decimals: number;
   icon: string;
   icon_file?: File;
+  usdPrice: string | null;
 }
 
 export class Token {
@@ -24,6 +25,7 @@ export class Token {
           symbol: string;
           decimals: number;
           icon: string;
+          usdPrice: string;
         }[];
 
         if (result.length === 0) {
@@ -42,6 +44,7 @@ export class Token {
                 type: blob.type,
               })
             : null,
+          usdPrice: result[0].usdPrice,
         };
       },
     };
@@ -69,6 +72,26 @@ export class Token {
 
         const icon = await this.evm.getIcon(network, address);
 
+        let usdPrice: string | null = null;
+        try {
+          const res = await fetch(
+            `https://api.dexscreener.com/latest/dex/search?q=${address}`
+          );
+          const data = await res.json();
+
+          if (data.pairs && data.pairs.length > 0) {
+            // 取 TVL 最大的交易對（通常最準確）
+            const mainPair = data.pairs.sort(
+              (a: any, b: any) =>
+                (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
+            )[0];
+
+            usdPrice = mainPair.priceUsd ?? null;
+          }
+        } catch (error) {
+          console.error('Dexscreener error:', error);
+        }
+
         return {
           name,
           symbol,
@@ -79,6 +102,7 @@ export class Token {
                 type: icon.blob.type,
               })
             : null,
+          usdPrice,
         };
       },
       getIcon: async (network: string, address: string) => {

@@ -15,6 +15,7 @@ describe('Token', () => {
     expect(token.decimals).toBe(6);
     expect(token.icon).not.toBeEmpty();
     expect(token.icon_file).not.toBeEmpty();
+    expect(token.usdPrice).not.toBeNull();
   });
 
   test('BSC Network get USDC token info', async () => {
@@ -29,5 +30,6 @@ describe('Token', () => {
     expect(token.decimals).toBe(18);
     expect(token.icon).not.toBeEmpty();
     expect(token.icon_file).not.toBeEmpty();
+    expect(token.usdPrice).not.toBeNull();
   });
 });
