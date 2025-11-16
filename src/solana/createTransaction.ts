@@ -68,7 +68,7 @@ export async function createSolanaTransaction({
   return transaction;
 }
 
-export async function createTokenTransaction(
+export async function createSPLTransaction(
   connection: Connection,
   {
     feePayer,
@@ -118,7 +118,7 @@ export async function createTokenTransaction(
     createTransferInstruction(
       fromPayerATA,
       recipientATA,
-      new PublicKey(feePayer),
+      new PublicKey(source),
       Number(amount),
       [],
       TOKEN_PROGRAM_ID
@@ -135,7 +135,7 @@ export async function createTokenTransaction(
   return transaction;
 }
 
-export interface CreateSolanaTransactionParams {
+export interface CreateTransactionParams {
   feePayer: string | PublicKey;
   source: string | PublicKey;
   destination: string | PublicKey;
@@ -145,10 +145,10 @@ export interface CreateSolanaTransactionParams {
 
 export function createTransaction(
   connection: Connection,
-  { feePayer, source, destination, amount, mint }: CreateSolanaTransactionParams
+  { feePayer, source, destination, amount, mint }: CreateTransactionParams
 ) {
   if (mint) {
-    return createTokenTransaction(connection, {
+    return createSPLTransaction(connection, {
       feePayer,
       source,
       destination,

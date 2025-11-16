@@ -7,7 +7,7 @@ import {
 } from 'ethers';
 import {
   createTransaction,
-  CreateSolanaTransactionParams,
+  CreateTransactionParams,
 } from '../solana/createTransaction';
 import { decodeTransfer } from '../solana/decodeTransfer';
 import { getTransfers } from '../solana/getTransfers';
@@ -35,7 +35,7 @@ export class Transaction {
       },
       create: async (
         connection: Connection,
-        params: CreateSolanaTransactionParams
+        params: CreateTransactionParams
       ) => {
         return createTransaction(connection, params);
       },

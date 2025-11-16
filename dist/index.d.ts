@@ -54,7 +54,7 @@ declare class Balance {
     };
 }
 
-interface CreateSolanaTransactionParams {
+interface CreateTransactionParams {
     feePayer: string | PublicKey;
     source: string | PublicKey;
     destination: string | PublicKey;
@@ -74,7 +74,7 @@ declare class Transaction {
         get: (connection: Connection, { signature, }: {
             signature: string;
         }) => Promise<ParsedTransactionWithMeta>;
-        create: (connection: Connection, params: CreateSolanaTransactionParams) => Promise<_solana_web3_js.Transaction>;
+        create: (connection: Connection, params: CreateTransactionParams) => Promise<_solana_web3_js.Transaction>;
         decodeTransfer: (connection: Connection, base64: string) => Promise<Transfer>;
         getTransfers: (connection: Connection, src: string | ParsedTransactionWithMeta) => Promise<Transfer[]>;
         getGasFee: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => string;

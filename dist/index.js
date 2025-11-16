@@ -230,7 +230,7 @@ async function createSolanaTransaction({
   );
   return transaction;
 }
-async function createTokenTransaction(connection, {
+async function createSPLTransaction(connection, {
   feePayer,
   source,
   destination,
@@ -266,7 +266,7 @@ async function createTokenTransaction(connection, {
     createTransferInstruction(
       fromPayerATA,
       recipientATA,
-      new PublicKey3(feePayer),
+      new PublicKey3(source),
       Number(amount),
       [],
       TOKEN_PROGRAM_ID2
@@ -277,7 +277,7 @@ async function createTokenTransaction(connection, {
 }
 function createTransaction(connection, { feePayer, source, destination, amount, mint }) {
   if (mint) {
-    return createTokenTransaction(connection, {
+    return createSPLTransaction(connection, {
       feePayer,
       source,
       destination,
