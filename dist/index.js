@@ -633,6 +633,14 @@ var NETWORKS = {
   TRON: "tron",
   BTC: "bitcoin"
 };
+var BLOCK_TIME_MS = {
+  SOLANA: 400,
+  BSC: 750,
+  ETH: 12e3,
+  TON: 5e3,
+  TRON: 3e3,
+  BTC: 6e5
+};
 var NATIVE_TOKEN_POOL_PAIRS = {
   SOLANA: "SOLUSDT",
   BSC: "BNBUSDT",
@@ -782,6 +790,7 @@ function parseUnits(value, decimals) {
   return BigInt(intPart ? intPart + fracPadded : fracPadded);
 }
 export {
+  BLOCK_TIME_MS,
   Balance,
   CHAIN_IDS,
   ERC20_ABI,

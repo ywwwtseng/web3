@@ -13,6 +13,15 @@ export const NETWORKS = {
   BTC: 'bitcoin',
 };
 
+export const BLOCK_TIME_MS = {
+  SOLANA: 400,
+  BSC: 750,
+  ETH: 12000,
+  TON: 5000,
+  TRON: 3000,
+  BTC: 600000,
+};
+
 export const NATIVE_TOKEN_POOL_PAIRS = {
   SOLANA: 'SOLUSDT',
   BSC: 'BNBUSDT',

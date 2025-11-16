@@ -150,6 +150,14 @@ declare const NETWORKS: {
     TRON: string;
     BTC: string;
 };
+declare const BLOCK_TIME_MS: {
+    SOLANA: number;
+    BSC: number;
+    ETH: number;
+    TON: number;
+    TRON: number;
+    BTC: number;
+};
 declare const NATIVE_TOKEN_POOL_PAIRS: {
     SOLANA: string;
     BSC: string;
@@ -165,4 +173,4 @@ declare const CHAIN_IDS: {
 
 declare const ERC20_ABI: string[];
 
-export { Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, formatUnits, getRpcUrl, getSignaturesForAddress, parseUnits };
+export { BLOCK_TIME_MS, Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, formatUnits, getRpcUrl, getSignaturesForAddress, parseUnits };
