@@ -118,6 +118,7 @@ import {
   getAssociatedTokenAddressSync,
   getAccount,
   TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import { Contract } from "ethers";
@@ -138,17 +139,24 @@ var Balance = class {
     return {
       get: async (connection, {
         address,
-        tokenAddress
+        tokenAddress,
+        tokenProgram
       }) => {
         if (tokenAddress) {
+          const programId = tokenProgram === TOKEN_2022_PROGRAM_ID.toString() ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
           const ownerATA = getAssociatedTokenAddressSync(
             new PublicKey2(tokenAddress),
             new PublicKey2(address),
             false,
-            TOKEN_PROGRAM_ID,
+            programId,
             ASSOCIATED_TOKEN_PROGRAM_ID
           );
-          const account = await getAccount(connection, ownerATA);
+          const account = await getAccount(
+            connection,
+            ownerATA,
+            void 0,
+            programId
+          );
           return account.amount;
         } else {
           return await connection.getBalance(new PublicKey2(address));
@@ -187,22 +195,46 @@ import {
   SystemProgram
 } from "@solana/web3.js";
 import {
+  getMint,
   getAssociatedTokenAddressSync as getAssociatedTokenAddressSync2,
   createTransferInstruction,
+  createTransferCheckedInstruction,
   createAssociatedTokenAccountInstruction,
   TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID2,
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID2,
   ASSOCIATED_TOKEN_PROGRAM_ID as ASSOCIATED_TOKEN_PROGRAM_ID2
 } from "@solana/spl-token";
-async function hasAta(connection, mintAddress, ownerAddress) {
+import { BN } from "@project-serum/anchor";
+async function detectTokenProgram(connection, mintAddress) {
+  const mint = new PublicKey3(mintAddress);
+  const mintInfo = await connection.getAccountInfo(mint);
+  if (!mintInfo) {
+    throw new Error(`Mint account not found: ${mintAddress}`);
+  }
+  if (mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID2)) {
+    return TOKEN_2022_PROGRAM_ID2;
+  }
+  return TOKEN_PROGRAM_ID2;
+}
+async function hasATA(connection, mintAddress, ownerAddress, tokenProgram) {
   const ata = getAssociatedTokenAddressSync2(
     new PublicKey3(mintAddress),
-    new PublicKey3(ownerAddress)
+    new PublicKey3(ownerAddress),
+    false,
+    tokenProgram,
+    ASSOCIATED_TOKEN_PROGRAM_ID2
   );
   const accountInfo = await connection.getAccountInfo(ata);
   return accountInfo !== null;
 }
-function createAtaInstruction(payer, mint, owner) {
-  const ata = getAssociatedTokenAddressSync2(mint, owner);
+function createATAInstruction(payer, mint, owner, tokenProgram) {
+  const ata = getAssociatedTokenAddressSync2(
+    mint,
+    owner,
+    false,
+    tokenProgram,
+    ASSOCIATED_TOKEN_PROGRAM_ID2
+  );
   return createAssociatedTokenAccountInstruction(
     payer,
     // 誰出 SOL 來建 ATA
@@ -212,7 +244,7 @@ function createAtaInstruction(payer, mint, owner) {
     // ATA 的持有者 (接收方)
     mint,
     // Token Mint
-    TOKEN_PROGRAM_ID2,
+    tokenProgram,
     ASSOCIATED_TOKEN_PROGRAM_ID2
   );
 }
@@ -235,23 +267,42 @@ async function createSPLTransaction(connection, {
   source,
   destination,
   amount,
-  mint
+  mint,
+  tokenProgram
 }) {
+  if (tokenProgram) {
+    tokenProgram = new PublicKey3(tokenProgram).equals(TOKEN_2022_PROGRAM_ID2) ? TOKEN_2022_PROGRAM_ID2 : TOKEN_PROGRAM_ID2;
+  } else {
+    tokenProgram = await detectTokenProgram(connection, mint);
+  }
+  const mintInfo = await getMint(
+    connection,
+    new PublicKey3(mint),
+    "confirmed",
+    tokenProgram
+    // TOKEN_PROGRAM_ID or TOKEN_2022_PROGRAM_ID
+  );
   const fromPayerATA = getAssociatedTokenAddressSync2(
     new PublicKey3(mint),
     new PublicKey3(source),
     false,
-    TOKEN_PROGRAM_ID2,
+    tokenProgram,
     ASSOCIATED_TOKEN_PROGRAM_ID2
   );
-  const hasRecipientATA = await hasAta(connection, mint, destination);
+  const hasRecipientATA = await hasATA(
+    connection,
+    mint,
+    destination,
+    tokenProgram
+  );
   const instructions = [];
   if (!hasRecipientATA) {
     instructions.push(
-      createAtaInstruction(
+      createATAInstruction(
         new PublicKey3(feePayer),
         new PublicKey3(mint),
-        new PublicKey3(destination)
+        new PublicKey3(destination),
+        tokenProgram
       )
     );
   }
@@ -259,30 +310,53 @@ async function createSPLTransaction(connection, {
     new PublicKey3(mint),
     new PublicKey3(destination),
     false,
-    TOKEN_PROGRAM_ID2,
+    tokenProgram,
     ASSOCIATED_TOKEN_PROGRAM_ID2
   );
-  instructions.push(
-    createTransferInstruction(
-      fromPayerATA,
-      recipientATA,
-      new PublicKey3(source),
-      Number(amount),
-      [],
-      TOKEN_PROGRAM_ID2
-    )
-  );
+  if (tokenProgram.equals(TOKEN_2022_PROGRAM_ID2)) {
+    instructions.push(
+      createTransferCheckedInstruction(
+        fromPayerATA,
+        new PublicKey3(mint),
+        recipientATA,
+        new PublicKey3(source),
+        new BN(amount),
+        mintInfo.decimals,
+        [],
+        TOKEN_2022_PROGRAM_ID2
+      )
+    );
+  } else {
+    instructions.push(
+      createTransferInstruction(
+        fromPayerATA,
+        recipientATA,
+        new PublicKey3(source),
+        Number(amount),
+        [],
+        TOKEN_PROGRAM_ID2
+      )
+    );
+  }
   const transaction = new Transaction().add(...instructions);
   return transaction;
 }
-function createTransaction(connection, { feePayer, source, destination, amount, mint }) {
+function createTransaction(connection, {
+  feePayer,
+  source,
+  destination,
+  amount,
+  mint,
+  tokenProgram
+}) {
   if (mint) {
     return createSPLTransaction(connection, {
       feePayer,
       source,
       destination,
       amount,
-      mint
+      mint,
+      tokenProgram
     });
   } else {
     return createSolanaTransaction({
@@ -302,7 +376,9 @@ import {
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID as ASSOCIATED_TOKEN_PROGRAM_ID3,
   TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID3,
-  decodeTransferInstruction
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID3,
+  decodeTransferInstruction,
+  decodeTransferCheckedInstruction
 } from "@solana/spl-token";
 
 // src/solana/getAccountInfo.ts
@@ -318,44 +394,87 @@ async function getAccountInfo(connection, publicKey) {
 // src/solana/decodeTransfer.ts
 async function decodeTransfer(connection, base64) {
   const tx = Transaction2.from(Buffer.from(base64, "base64"));
-  if (tx.instructions.length === 1 && tx.instructions[0].programId.equals(SystemProgram2.programId)) {
-    const ix = tx.instructions[0];
-    const parsed = SystemInstruction.decodeTransfer(ix);
-    const source = parsed.fromPubkey.toBase58();
-    const destination = parsed.toPubkey.toBase58();
-    const amount = parsed.lamports.toString();
-    return {
-      source,
-      destination,
-      amount
-    };
-  } else if (tx.instructions.length === 1 && tx.instructions[0].programId.equals(TOKEN_PROGRAM_ID3)) {
-    const ix = tx.instructions[0];
-    const parsed = decodeTransferInstruction(ix);
-    const amount = parsed.data.amount.toString();
-    const sourceInfo = await getAccountInfo(
-      connection,
-      parsed.keys.source.pubkey
-    );
-    const destinationInfo = await getAccountInfo(
-      connection,
-      parsed.keys.destination.pubkey
-    );
-    return {
-      source: sourceInfo.owner,
-      destination: destinationInfo.owner,
-      amount,
-      tokenAddress: sourceInfo.mint
-    };
+  if (tx.instructions.length === 1) {
+    if (tx.instructions[0].programId.equals(SystemProgram2.programId)) {
+      const ix = tx.instructions[0];
+      const parsed = SystemInstruction.decodeTransfer(ix);
+      const source = parsed.fromPubkey.toBase58();
+      const destination = parsed.toPubkey.toBase58();
+      const amount = parsed.lamports.toString();
+      return {
+        source,
+        destination,
+        amount
+      };
+    } else if (tx.instructions[0].programId.equals(TOKEN_PROGRAM_ID3)) {
+      const ix = tx.instructions[0];
+      const parsed = decodeTransferInstruction(ix);
+      const amount = parsed.data.amount.toString();
+      const sourceInfo = await getAccountInfo(
+        connection,
+        parsed.keys.source.pubkey
+      );
+      const destinationInfo = await getAccountInfo(
+        connection,
+        parsed.keys.destination.pubkey
+      );
+      return {
+        source: sourceInfo.owner,
+        destination: destinationInfo.owner,
+        amount,
+        tokenAddress: sourceInfo.mint
+      };
+    } else if (tx.instructions[0].programId.equals(TOKEN_2022_PROGRAM_ID3)) {
+      const ix = tx.instructions[0];
+      const parsed = decodeTransferCheckedInstruction(
+        ix,
+        TOKEN_2022_PROGRAM_ID3
+      );
+      const amount = parsed.data.amount.toString();
+      const sourceInfo = await getAccountInfo(
+        connection,
+        parsed.keys.source.pubkey
+      );
+      const destinationInfo = await getAccountInfo(
+        connection,
+        parsed.keys.destination.pubkey
+      );
+      return {
+        source: sourceInfo.owner,
+        destination: destinationInfo.owner,
+        amount,
+        tokenAddress: sourceInfo.mint
+      };
+    }
   } else if (tx.instructions.length === 2) {
     const cata_ix = tx.instructions.find(
       (ix2) => ix2.programId.equals(ASSOCIATED_TOKEN_PROGRAM_ID3)
     );
-    const ix = tx.instructions.find(
+    let ix = tx.instructions.find(
       (ix2) => ix2.programId.equals(TOKEN_PROGRAM_ID3)
     );
     if (ix) {
       const parsed = decodeTransferInstruction(ix);
+      const amount = parsed.data.amount.toString();
+      const sourceInfo = await getAccountInfo(
+        connection,
+        parsed.keys.source.pubkey
+      );
+      return {
+        source: sourceInfo.owner,
+        destination: cata_ix.keys[2].pubkey.toBase58(),
+        amount,
+        tokenAddress: sourceInfo.mint
+      };
+    }
+    ix = tx.instructions.find(
+      (ix2) => ix2.programId.equals(TOKEN_2022_PROGRAM_ID3)
+    );
+    if (ix) {
+      const parsed = decodeTransferCheckedInstruction(
+        ix,
+        TOKEN_2022_PROGRAM_ID3
+      );
       const amount = parsed.data.amount.toString();
       const sourceInfo = await getAccountInfo(
         connection,
@@ -664,7 +783,9 @@ var Token = class {
         );
         const result = await res.json();
         if (result.length === 0) {
-          throw new Error("message.token_not_found");
+          throw new Error("message.token_not_found", {
+            cause: `Token ${address} not found`
+          });
         }
         const blob = await loadImage(result[0].icon);
         return {
@@ -675,7 +796,8 @@ var Token = class {
           icon_file: blob ? new File([blob], result[0].name, {
             type: blob.type
           }) : null,
-          usdPrice: result[0].usdPrice
+          usdPrice: result[0].usdPrice,
+          tokenProgram: result[0].tokenProgram
         };
       }
     };

@@ -1,5 +1,6 @@
 import { test, expect, describe } from 'bun:test';
 import crypto from 'crypto';
+import { TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { Transaction, solana, ethers, RPC_URL, KeyVaultService } from '..';
 import { wallet } from '../config/wallet';
 
@@ -82,6 +83,40 @@ describe('Transaction', () => {
     expect(transter.source).toBe(wallet.solana.publicKey);
     expect(transter.destination).toBe(
       'Cn9yzV2kdCQRYNUYZ4KXeD5Z7DmevUkqixjv8eaYYXfk'
+    );
+    expect(transter.amount).toBe('1000000');
+  });
+
+  test('decode PUMP Transfer Transaction', async () => {
+    const connection = new solana.Connection(RPC_URL.SOLANA_MAIN);
+    const transaction = await Transaction.solana.create(connection, {
+      feePayer: 'Cn9yzV2kdCQRYNUYZ4KXeD5Z7DmevUkqixjv8eaYYXfk',
+      source: 'Cn9yzV2kdCQRYNUYZ4KXeD5Z7DmevUkqixjv8eaYYXfk',
+      destination: '5g1QJWjSKuP2Pd2hbRffiSKPt7qgNvHgSN3m7nzRNbBM',
+      amount: '1000000',
+      mint: 'pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn',
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+    });
+
+    const latestBlockhash = await connection.getLatestBlockhash();
+    transaction.feePayer = new solana.PublicKey(wallet.solana.publicKey);
+    transaction.recentBlockhash = latestBlockhash.blockhash;
+    transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+
+    const serialized = transaction
+      .serialize({ requireAllSignatures: false })
+      .toString('base64');
+
+    const transter = await Transaction.solana.decodeTransfer(
+      connection,
+      serialized
+    );
+
+    expect(transter.source).toBe(
+      'Cn9yzV2kdCQRYNUYZ4KXeD5Z7DmevUkqixjv8eaYYXfk'
+    );
+    expect(transter.destination).toBe(
+      '5g1QJWjSKuP2Pd2hbRffiSKPt7qgNvHgSN3m7nzRNbBM'
     );
     expect(transter.amount).toBe('1000000');
   });

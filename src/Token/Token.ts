@@ -9,6 +9,7 @@ export interface TokenInfo {
   decimals: number;
   icon: string;
   icon_file?: File;
+  tokenProgram?: string;
   usdPrice: string | null;
 }
 
@@ -26,10 +27,13 @@ export class Token {
           decimals: number;
           icon: string;
           usdPrice: string;
+          tokenProgram: string;
         }[];
 
         if (result.length === 0) {
-          throw new Error('message.token_not_found');
+          throw new Error('message.token_not_found', {
+            cause: `Token ${address} not found`,
+          });
         }
 
         const blob = await loadImage(result[0].icon);
@@ -45,6 +49,7 @@ export class Token {
               })
             : null,
           usdPrice: result[0].usdPrice,
+          tokenProgram: result[0].tokenProgram,
         };
       },
     };

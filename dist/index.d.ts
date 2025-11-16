@@ -41,9 +41,10 @@ declare class KeyVaultService extends AES256GCM {
 
 declare class Balance {
     static get solana(): {
-        get: (connection: Connection, { address, tokenAddress, }: {
+        get: (connection: Connection, { address, tokenAddress, tokenProgram, }: {
             address: string;
             tokenAddress?: string | null;
+            tokenProgram?: string | null;
         }) => Promise<number | bigint>;
     };
     static get evm(): {
@@ -60,6 +61,7 @@ interface CreateTransactionParams {
     destination: string | PublicKey;
     amount: bigint | string | number;
     mint?: string | PublicKey | null;
+    tokenProgram?: string | PublicKey | null;
 }
 
 type Transfer = {
@@ -108,6 +110,7 @@ interface TokenInfo {
     decimals: number;
     icon: string;
     icon_file?: File;
+    tokenProgram?: string;
     usdPrice: string | null;
 }
 declare class Token {
