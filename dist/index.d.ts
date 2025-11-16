@@ -134,6 +134,9 @@ declare class Token {
 
 declare function getRpcUrl(network: string): string;
 
+declare function formatUnits(value: string | bigint, decimals: number): string;
+declare function parseUnits(value: string, decimals: number): bigint;
+
 declare const RPC_URL: {
     BSC: string;
     SOLANA_DEV: string;
@@ -162,4 +165,4 @@ declare const CHAIN_IDS: {
 
 declare const ERC20_ABI: string[];
 
-export { Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, getRpcUrl, getSignaturesForAddress };
+export { Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, formatUnits, getRpcUrl, getSignaturesForAddress, parseUnits };

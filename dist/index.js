@@ -760,6 +760,27 @@ function getRpcUrl(network) {
       throw new Error(`Network ${network} not supported`);
   }
 }
+
+// src/utils/amount.ts
+function formatUnits(value, decimals) {
+  const str = typeof value === "bigint" ? value.toString() : value;
+  if (decimals === 0) return str;
+  const padded = str.padStart(decimals + 1, "0");
+  const intPart = padded.slice(0, padded.length - decimals);
+  const fracPart = padded.slice(padded.length - decimals).replace(/0+$/, "");
+  return fracPart.length ? `${intPart}.${fracPart}` : intPart;
+}
+function parseUnits(value, decimals) {
+  if (!value.includes(".")) {
+    return BigInt(value + "0".repeat(decimals));
+  }
+  const [intPart, fracPart = ""] = value.split(".");
+  if (fracPart.length > decimals) {
+    throw new Error(`Too many decimal places (max ${decimals.toString()})`);
+  }
+  const fracPadded = fracPart.padEnd(decimals, "0");
+  return BigInt(intPart ? intPart + fracPadded : fracPadded);
+}
 export {
   Balance,
   CHAIN_IDS,
@@ -772,7 +793,9 @@ export {
   Token,
   Transaction3 as Transaction,
   ethers,
+  formatUnits,
   getRpcUrl,
   getSignaturesForAddress,
+  parseUnits,
   solana
 };

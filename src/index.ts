@@ -6,6 +6,7 @@ export * from './Balance/Balance';
 export * from './Transaction/Transaction';
 export * from './Token/Token';
 export * from './utils/rpc';
+export * from './utils/amount';
 export * from './constants';
 export * from './types';
 export * from './abi';
