@@ -2,6 +2,7 @@ import { JsonRpcProvider, Contract } from 'ethers';
 import { ERC20_ABI } from '../abi/ERC20_ABI';
 import { loadImage } from '../utils/loaders';
 import { NETWORKS } from '../constants';
+import * as evm from '../evm';
 
 export interface TokenInfo {
   name: string;
@@ -75,27 +76,8 @@ export class Token {
           throw new Error('message.token_not_found');
         }
 
-        const icon = await this.evm.getIcon(network, address);
-
-        let usdPrice: string | null = null;
-        try {
-          const res = await fetch(
-            `https://api.dexscreener.com/latest/dex/search?q=${address}`
-          );
-          const data = await res.json();
-
-          if (data.pairs && data.pairs.length > 0) {
-            // 取 TVL 最大的交易對（通常最準確）
-            const mainPair = data.pairs.sort(
-              (a: any, b: any) =>
-                (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
-            )[0];
-
-            usdPrice = mainPair.priceUsd ?? null;
-          }
-        } catch (error) {
-          console.error('Dexscreener error:', error);
-        }
+        const icon = await evm.getTokenIcon(network, address);
+        const usdPrice = await evm.getTokenPrice(network, address);
 
         return {
           name,
@@ -108,29 +90,6 @@ export class Token {
               })
             : null,
           usdPrice,
-        };
-      },
-      getIcon: async (network: string, address: string) => {
-        if (network === NETWORKS.BSC) {
-          const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
-          const blob = await loadImage(url);
-
-          return {
-            blob,
-            url,
-          };
-        }
-
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
-        );
-        const result = await res.json();
-        const url = result.image.small;
-        const blob = await loadImage(url);
-
-        return {
-          blob,
-          url,
         };
       },
     };

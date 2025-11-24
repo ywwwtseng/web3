@@ -742,12 +742,13 @@ async function loadImage(url) {
 var RPC_URL = {
   BSC: "https://bsc-dataseed.binance.org/",
   SOLANA_DEV: "https://api.devnet.solana.com",
-  SOLANA_MAIN: "https://api.mainnet-beta.solana.com"
+  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
+  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`
 };
 var NETWORKS = {
   SOLANA: "solana",
   BSC: "bsc",
-  ETH: "ethereum",
+  ETHEREUM: "ethereum",
   TON: "ton",
   TRON: "tron",
   BTC: "bitcoin"
@@ -772,6 +773,59 @@ var CHAIN_IDS = {
   BSC: 56,
   ETH: 1
 };
+
+// src/evm/getTokenIcon.ts
+async function getTokenIcon(network, address) {
+  if (network === NETWORKS.BSC) {
+    const url2 = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
+    const blob2 = await loadImage(url2);
+    return {
+      blob: blob2,
+      url: url2
+    };
+  }
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
+  );
+  const result = await res.json();
+  const url = result.image.small;
+  const blob = await loadImage(url);
+  return {
+    blob,
+    url
+  };
+}
+
+// src/evm/getTokenPrice.ts
+async function getTokenPrice(network, address) {
+  let usdPrice = null;
+  try {
+    if (network === NETWORKS.ETHEREUM) {
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
+      );
+      const data = await res.json();
+      const tokenData = data[address.toLowerCase()];
+      if (tokenData && tokenData.usd) {
+        usdPrice = tokenData.usd.toString();
+      }
+    } else if (network === NETWORKS.BSC) {
+      const res = await fetch(
+        `https://api.dexscreener.com/latest/dex/search?q=${address}`
+      );
+      const data = await res.json();
+      if (data.pairs && data.pairs.length > 0) {
+        const mainPair = data.pairs.sort(
+          (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
+        )[0];
+        usdPrice = mainPair.priceUsd ?? null;
+      }
+    }
+  } catch (error) {
+    console.error("Price API error:", error);
+  }
+  return usdPrice;
+}
 
 // src/Token/Token.ts
 var Token = class {
@@ -817,22 +871,8 @@ var Token = class {
         if (!name || !symbol || !decimals) {
           throw new Error("message.token_not_found");
         }
-        const icon = await this.evm.getIcon(network, address);
-        let usdPrice = null;
-        try {
-          const res = await fetch(
-            `https://api.dexscreener.com/latest/dex/search?q=${address}`
-          );
-          const data = await res.json();
-          if (data.pairs && data.pairs.length > 0) {
-            const mainPair = data.pairs.sort(
-              (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
-            )[0];
-            usdPrice = mainPair.priceUsd ?? null;
-          }
-        } catch (error) {
-          console.error("Dexscreener error:", error);
-        }
+        const icon = await getTokenIcon(network, address);
+        const usdPrice = await getTokenPrice(network, address);
         return {
           name,
           symbol,
@@ -842,26 +882,6 @@ var Token = class {
             type: icon.blob.type
           }) : null,
           usdPrice
-        };
-      },
-      getIcon: async (network, address) => {
-        if (network === NETWORKS.BSC) {
-          const url2 = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
-          const blob2 = await loadImage(url2);
-          return {
-            blob: blob2,
-            url: url2
-          };
-        }
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
-        );
-        const result = await res.json();
-        const url = result.image.small;
-        const blob = await loadImage(url);
-        return {
-          blob,
-          url
         };
       }
     };
@@ -880,12 +900,17 @@ var Token = class {
 };
 
 // src/utils/rpc.ts
-function getRpcUrl(network) {
+function getRpcUrl(network, options = {}) {
   switch (network) {
     case NETWORKS.SOLANA:
       return RPC_URL.SOLANA_DEV;
     case NETWORKS.BSC:
       return RPC_URL.BSC;
+    case NETWORKS.ETHEREUM:
+      if (!options.infuraApiKey) {
+        throw new Error("Infura API key is required");
+      }
+      return RPC_URL.ETHEREUM_MAINNET(options.infuraApiKey);
     default:
       throw new Error(`Network ${network} not supported`);
   }

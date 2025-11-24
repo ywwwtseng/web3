@@ -123,10 +123,6 @@ declare class Token {
             network: string;
             rpcUrl: string;
         }) => Promise<TokenInfo>;
-        getIcon: (network: string, address: string) => Promise<{
-            blob: Blob;
-            url: any;
-        }>;
     };
     static getInfo({ address, network, rpcUrl, }: {
         address: string;
@@ -135,7 +131,9 @@ declare class Token {
     }): Promise<TokenInfo>;
 }
 
-declare function getRpcUrl(network: string): string;
+declare function getRpcUrl(network: string, options?: {
+    infuraApiKey?: string;
+}): string;
 
 declare function formatUnits(value: string | bigint, decimals: number): string;
 declare function parseUnits(value: string, decimals: number): bigint;
@@ -144,11 +142,12 @@ declare const RPC_URL: {
     BSC: string;
     SOLANA_DEV: string;
     SOLANA_MAIN: string;
+    ETHEREUM_MAINNET: (key: string) => string;
 };
 declare const NETWORKS: {
     SOLANA: string;
     BSC: string;
-    ETH: string;
+    ETHEREUM: string;
     TON: string;
     TRON: string;
     BTC: string;

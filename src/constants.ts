@@ -2,12 +2,13 @@ export const RPC_URL = {
   BSC: 'https://bsc-dataseed.binance.org/',
   SOLANA_DEV: 'https://api.devnet.solana.com',
   SOLANA_MAIN: 'https://api.mainnet-beta.solana.com',
+  ETHEREUM_MAINNET: (key: string) => `https://mainnet.infura.io/v3/${key}`,
 };
 
 export const NETWORKS = {
   SOLANA: 'solana',
   BSC: 'bsc',
-  ETH: 'ethereum',
+  ETHEREUM: 'ethereum',
   TON: 'ton',
   TRON: 'tron',
   BTC: 'bitcoin',

@@ -32,4 +32,17 @@ describe('Token', () => {
     expect(token.icon_file).not.toBeEmpty();
     expect(token.usdPrice).not.toBeNull();
   });
+
+  test('EVM Network get USDC token info', async () => {
+    const token = await Token.getInfo({
+      address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      network: NETWORKS.ETHEREUM,
+      rpcUrl: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    });
+    console.log(token);
+    expect(token).toBeDefined();
+    expect(token.name).toBe('USD Coin');
+    expect(token.symbol).toBe('USDC');
+    expect(token.usdPrice).not.toBeNull();
+  });
 });
