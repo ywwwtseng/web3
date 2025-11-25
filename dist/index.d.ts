@@ -108,6 +108,7 @@ interface TokenInfo {
     name: string;
     symbol: string;
     decimals: number;
+    address: string;
     icon: string;
     icon_file?: File;
     tokenProgram?: string;

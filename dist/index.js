@@ -723,7 +723,7 @@ var Transaction3 = class _Transaction {
 };
 
 // src/Token/Token.ts
-import { JsonRpcProvider as JsonRpcProvider3, Contract as Contract3 } from "ethers";
+import { JsonRpcProvider as JsonRpcProvider3, Contract as Contract3, getAddress } from "ethers";
 
 // src/utils/loaders.ts
 async function loadImage(url) {
@@ -843,6 +843,7 @@ var Token = class {
         }
         const blob = await loadImage(result[0].icon);
         return {
+          address: result[0].id,
           name: result[0].name,
           symbol: result[0].symbol,
           decimals: result[0].decimals,
@@ -874,6 +875,8 @@ var Token = class {
         const icon = await getTokenIcon(network, address);
         const usdPrice = await getTokenPrice(network, address);
         return {
+          // return EIP-55 address
+          address: getAddress(await contract.getAddress()),
           name,
           symbol,
           decimals: Number(decimals),

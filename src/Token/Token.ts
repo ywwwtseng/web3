@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Contract } from 'ethers';
+import { JsonRpcProvider, Contract, getAddress } from 'ethers';
 import { ERC20_ABI } from '../abi/ERC20_ABI';
 import { loadImage } from '../utils/loaders';
 import { NETWORKS } from '../constants';
@@ -8,6 +8,7 @@ export interface TokenInfo {
   name: string;
   symbol: string;
   decimals: number;
+  address: string;
   icon: string;
   icon_file?: File;
   tokenProgram?: string;
@@ -23,6 +24,7 @@ export class Token {
         );
 
         const result = (await res.json()) as {
+          id: string;
           name: string;
           symbol: string;
           decimals: number;
@@ -40,6 +42,7 @@ export class Token {
         const blob = await loadImage(result[0].icon);
 
         return {
+          address: result[0].id,
           name: result[0].name,
           symbol: result[0].symbol,
           decimals: result[0].decimals,
@@ -71,7 +74,6 @@ export class Token {
         const name = await contract.name();
         const symbol = await contract.symbol();
         const decimals = await contract.decimals();
-
         if (!name || !symbol || !decimals) {
           throw new Error('message.token_not_found');
         }
@@ -80,6 +82,8 @@ export class Token {
         const usdPrice = await evm.getTokenPrice(network, address);
 
         return {
+          // return EIP-55 address
+          address: getAddress(await contract.getAddress()),
           name,
           symbol,
           decimals: Number(decimals),
