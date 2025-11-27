@@ -2,8 +2,9 @@ import * as _solana_web3_js from '@solana/web3.js';
 import { Keypair, Connection, SignaturesForAddressOptions, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.js';
 export { _solana_web3_js as solana };
 import * as ethers from 'ethers';
-import { Wallet, JsonRpcProvider, TransactionReceipt } from 'ethers';
+import { TransactionReceipt, TransactionResponse, Wallet, JsonRpcProvider } from 'ethers';
 export { ethers };
+import { TonClient, Transaction as Transaction$1 } from '@ton/ton';
 import * as _ton_core from '@ton/core';
 
 declare class KeyPair {
@@ -14,6 +15,34 @@ declare class KeyPair {
 declare function getSignaturesForAddress(connection: Connection, { address, ...options }: {
     address: string;
 } & SignaturesForAddressOptions): Promise<string[]>;
+
+declare function getJettonWalletAddress(minterAddress: string, ownerAddress: string): Promise<string>;
+
+declare const waitForTransaction: (options: {
+    hash: string;
+    refetchInterval?: number;
+    refetchLimit?: number;
+    address: string;
+}, client: TonClient) => Promise<Transaction$1 | null>;
+
+declare function getTokenIcon(network: string, address: string): Promise<{
+    blob: Blob;
+    url: any;
+}>;
+
+declare function getTokenPrice(network: string, address: string): Promise<string>;
+
+type Transfer = {
+    source: string;
+    destination: string;
+    amount: string;
+    tokenAddress?: string;
+};
+
+declare function getTransfer({ receipt, transaction, }: {
+    receipt: TransactionReceipt;
+    transaction: TransactionResponse;
+}): Promise<Transfer | null>;
 
 declare class AES256GCM {
     private key;
@@ -77,13 +106,6 @@ interface CreateTransactionParams {
     mint?: string | PublicKey | null;
     tokenProgram?: string | PublicKey | null;
 }
-
-type Transfer = {
-    source: string;
-    destination: string;
-    amount: string;
-    tokenAddress?: string;
-};
 
 declare const RPC_URL: {
     BSC: string;
@@ -209,4 +231,4 @@ declare function parseUnits(value: string, decimals: number): bigint;
 
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, formatUnits, getRpcUrl, getSignaturesForAddress, parseUnits };
+export { BLOCK_TIME_MS, Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, formatUnits, getJettonWalletAddress, getRpcUrl, getSignaturesForAddress, getTokenIcon, getTokenPrice, getTransfer, parseUnits, waitForTransaction };

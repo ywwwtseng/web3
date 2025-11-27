@@ -34,11 +34,227 @@ async function getSignaturesForAddress(connection, {
   return result.map((s) => s.signature);
 }
 
+// src/ton/getJettonWalletAddress.ts
+import TonWeb from "tonweb";
+async function getJettonWalletAddress(minterAddress, ownerAddress) {
+  const tonweb = new TonWeb();
+  const JettonMinter = TonWeb.token.jetton.JettonMinter;
+  const minter = new JettonMinter(tonweb.provider, {
+    address: new TonWeb.utils.Address(minterAddress),
+    adminAddress: new TonWeb.utils.Address(
+      "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"
+    ),
+    // dummy zero address
+    jettonContentUri: "",
+    jettonWalletCodeHex: ""
+    // dummy
+  });
+  const walletAddress = await minter.getJettonWalletAddress(
+    new TonWeb.utils.Address(ownerAddress)
+  );
+  return walletAddress.toString(true, true, true, false);
+}
+
+// src/ton/waitForTransaction.ts
+import {
+  Address,
+  beginCell,
+  storeMessage
+} from "@ton/ton";
+var waitForTransaction = async (options, client) => {
+  const { hash, refetchInterval = 1e3, refetchLimit, address } = options;
+  return new Promise((resolve) => {
+    let refetches = 0;
+    const walletAddress = Address.parse(address);
+    const interval = setInterval(async () => {
+      refetches += 1;
+      console.log("waiting transaction...");
+      const state = await client.getContractState(walletAddress);
+      if (!state || !state.lastTransaction) {
+        clearInterval(interval);
+        resolve(null);
+        return;
+      }
+      const lastLt = state.lastTransaction.lt;
+      const lastHash = state.lastTransaction.hash;
+      const lastTx = await client.getTransaction(
+        walletAddress,
+        lastLt,
+        lastHash
+      );
+      if (lastTx && lastTx.inMessage) {
+        const msgCell = beginCell().store(storeMessage(lastTx.inMessage)).endCell();
+        const inMsgHash = msgCell.hash().toString("base64");
+        console.log("InMsgHash", inMsgHash);
+        if (inMsgHash === hash) {
+          clearInterval(interval);
+          resolve(lastTx);
+        }
+      }
+      if (refetchLimit && refetches >= refetchLimit) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, refetchInterval);
+  });
+};
+
+// src/constants.ts
+var RPC_URL = {
+  BSC: "https://bsc-dataseed.binance.org/",
+  SOLANA_DEV: "https://api.devnet.solana.com",
+  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
+  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`,
+  TON_MAINNET: "https://mainnet.evercloud.dev"
+};
+var NETWORKS = {
+  SOLANA: "solana",
+  BSC: "bsc",
+  ETHEREUM: "ethereum",
+  TON: "ton",
+  TRON: "tron",
+  BTC: "bitcoin"
+};
+var BLOCK_TIME_MS = {
+  SOLANA: 400,
+  BSC: 750,
+  ETH: 12e3,
+  TON: 5e3,
+  TRON: 3e3,
+  BTC: 6e5
+};
+var NATIVE_TOKEN_POOL_PAIRS = {
+  SOLANA: "SOLUSDT",
+  BSC: "BNBUSDT",
+  ETH: "ETHUSDT",
+  TON: "TONUSDT",
+  TRON: "TRXUSDT",
+  BTC: "BTCUSDT"
+};
+var CHAIN_IDS = {
+  BSC: 56,
+  ETH: 1
+};
+
+// src/utils/loaders.ts
+async function loadImage(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      return null;
+    }
+    return await res.blob();
+  } catch (error) {
+    return null;
+  }
+}
+
+// src/evm/getTokenIcon.ts
+async function getTokenIcon(network, address) {
+  if (network === NETWORKS.BSC) {
+    const url2 = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
+    const blob2 = await loadImage(url2);
+    return {
+      blob: blob2,
+      url: url2
+    };
+  }
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
+  );
+  const result = await res.json();
+  const url = result.image.small;
+  const blob = await loadImage(url);
+  return {
+    blob,
+    url
+  };
+}
+
+// src/evm/getTokenPrice.ts
+async function getTokenPrice(network, address) {
+  let usdPrice = null;
+  try {
+    if (network === NETWORKS.ETHEREUM) {
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
+      );
+      const data = await res.json();
+      const tokenData = data[address.toLowerCase()];
+      if (tokenData && tokenData.usd) {
+        usdPrice = tokenData.usd.toString();
+      }
+    } else if (network === NETWORKS.BSC) {
+      const res = await fetch(
+        `https://api.dexscreener.com/latest/dex/search?q=${address}`
+      );
+      const data = await res.json();
+      if (data.pairs && data.pairs.length > 0) {
+        const mainPair = data.pairs.sort(
+          (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
+        )[0];
+        usdPrice = mainPair.priceUsd ?? null;
+      }
+    }
+  } catch (error) {
+    console.error("Price API error:", error);
+  }
+  return usdPrice;
+}
+
+// src/evm/getTransfer.ts
+import { Interface } from "ethers";
+
+// src/abi/ERC20_ABI.ts
+var ERC20_ABI = [
+  "function symbol() view returns (string)",
+  "function name() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 value) returns (bool)",
+  "event Transfer(address indexed from, address indexed to, uint256 value)"
+];
+
+// src/evm/getTransfer.ts
+var transferIface = new Interface(ERC20_ABI);
+async function getTransfer({
+  receipt,
+  transaction
+}) {
+  if (receipt.status !== 1) {
+    return null;
+  }
+  if (transaction.value && transaction.value > 0n && receipt.logs.length === 0) {
+    return {
+      source: transaction.from,
+      destination: transaction.to,
+      amount: transaction.value.toString()
+    };
+  }
+  for (const log of receipt.logs) {
+    try {
+      const parsed = transferIface.parseLog(log);
+      if (parsed?.name === "Transfer") {
+        const tokenAddress = log.address;
+        const rawAmount = parsed.args.value;
+        return {
+          source: parsed.args.from,
+          destination: parsed.args.to,
+          amount: rawAmount.toString(),
+          tokenAddress
+        };
+      }
+    } catch (err) {
+    }
+  }
+  return null;
+}
+
 // src/KeyVaultService/KeyVaultService.ts
 import { Wallet } from "ethers";
 import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
 import { WalletContractV5R1 } from "@ton/ton";
-import TonWeb from "tonweb";
+import TonWeb2 from "tonweb";
 
 // src/utils/AES256GCM.ts
 import crypto from "crypto";
@@ -133,7 +349,7 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        const keyPair = TonWeb.utils.nacl.sign.keyPair.fromSecretKey(
+        const keyPair = TonWeb2.utils.nacl.sign.keyPair.fromSecretKey(
           Buffer.from(decryptedHex, "hex")
         );
         const publicKey = Buffer.from(keyPair.publicKey);
@@ -161,18 +377,6 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import { Contract } from "ethers";
-
-// src/abi/ERC20_ABI.ts
-var ERC20_ABI = [
-  "function symbol() view returns (string)",
-  "function name() view returns (string)",
-  "function decimals() view returns (uint8)",
-  "function balanceOf(address) view returns (uint256)",
-  "function transfer(address to, uint256 value) returns (bool)",
-  "event Transfer(address indexed from, address indexed to, uint256 value)"
-];
-
-// src/Balance/Balance.ts
 var Balance = class {
   static get solana() {
     return {
@@ -230,7 +434,7 @@ import {
 // src/solana/createTransaction.ts
 import {
   PublicKey as PublicKey3,
-  Transaction,
+  Transaction as Transaction2,
   SystemProgram
 } from "@solana/web3.js";
 import {
@@ -292,7 +496,7 @@ async function createSolanaTransaction({
   destination,
   amount
 }) {
-  const transaction = new Transaction().add(
+  const transaction = new Transaction2().add(
     SystemProgram.transfer({
       fromPubkey: new PublicKey3(source),
       toPubkey: new PublicKey3(destination),
@@ -377,7 +581,7 @@ async function createSPLTransaction(connection, {
       )
     );
   }
-  const transaction = new Transaction().add(...instructions);
+  const transaction = new Transaction2().add(...instructions);
   return transaction;
 }
 function createTransaction(connection, {
@@ -409,7 +613,7 @@ function createTransaction(connection, {
 // src/solana/decodeTransfer.ts
 import {
   SystemProgram as SystemProgram2,
-  Transaction as Transaction2,
+  Transaction as Transaction3,
   SystemInstruction
 } from "@solana/web3.js";
 import {
@@ -432,7 +636,7 @@ async function getAccountInfo(connection, publicKey) {
 
 // src/solana/decodeTransfer.ts
 async function decodeTransfer(connection, base64) {
-  const tx = Transaction2.from(Buffer.from(base64, "base64"));
+  const tx = Transaction3.from(Buffer.from(base64, "base64"));
   if (tx.instructions.length === 1) {
     if (tx.instructions[0].programId.equals(SystemProgram2.programId)) {
       const ix = tx.instructions[0];
@@ -609,123 +813,6 @@ function getTransfers(parsedTransaction) {
   return transfers;
 }
 
-// src/evm/getTransfer.ts
-import { Interface } from "ethers";
-var transferIface = new Interface(ERC20_ABI);
-async function getTransfer({
-  receipt,
-  transaction
-}) {
-  if (receipt.status !== 1) {
-    return null;
-  }
-  if (transaction.value && transaction.value > 0n && receipt.logs.length === 0) {
-    return {
-      source: transaction.from,
-      destination: transaction.to,
-      amount: transaction.value.toString()
-    };
-  }
-  for (const log of receipt.logs) {
-    try {
-      const parsed = transferIface.parseLog(log);
-      if (parsed?.name === "Transfer") {
-        const tokenAddress = log.address;
-        const rawAmount = parsed.args.value;
-        return {
-          source: parsed.args.from,
-          destination: parsed.args.to,
-          amount: rawAmount.toString(),
-          tokenAddress
-        };
-      }
-    } catch (err) {
-    }
-  }
-  return null;
-}
-
-// src/ton/waitForTransaction.ts
-import {
-  Address,
-  beginCell,
-  storeMessage
-} from "@ton/ton";
-var waitForTransaction = async (options, client) => {
-  const { hash, refetchInterval = 1e3, refetchLimit, address } = options;
-  return new Promise((resolve) => {
-    let refetches = 0;
-    const walletAddress = Address.parse(address);
-    const interval = setInterval(async () => {
-      refetches += 1;
-      console.log("waiting transaction...");
-      const state = await client.getContractState(walletAddress);
-      if (!state || !state.lastTransaction) {
-        clearInterval(interval);
-        resolve(null);
-        return;
-      }
-      const lastLt = state.lastTransaction.lt;
-      const lastHash = state.lastTransaction.hash;
-      const lastTx = await client.getTransaction(
-        walletAddress,
-        lastLt,
-        lastHash
-      );
-      if (lastTx && lastTx.inMessage) {
-        const msgCell = beginCell().store(storeMessage(lastTx.inMessage)).endCell();
-        const inMsgHash = msgCell.hash().toString("base64");
-        console.log("InMsgHash", inMsgHash);
-        if (inMsgHash === hash) {
-          clearInterval(interval);
-          resolve(lastTx);
-        }
-      }
-      if (refetchLimit && refetches >= refetchLimit) {
-        clearInterval(interval);
-        resolve(null);
-      }
-    }, refetchInterval);
-  });
-};
-
-// src/constants.ts
-var RPC_URL = {
-  BSC: "https://bsc-dataseed.binance.org/",
-  SOLANA_DEV: "https://api.devnet.solana.com",
-  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
-  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`,
-  TON_MAINNET: "https://mainnet.evercloud.dev"
-};
-var NETWORKS = {
-  SOLANA: "solana",
-  BSC: "bsc",
-  ETHEREUM: "ethereum",
-  TON: "ton",
-  TRON: "tron",
-  BTC: "bitcoin"
-};
-var BLOCK_TIME_MS = {
-  SOLANA: 400,
-  BSC: 750,
-  ETH: 12e3,
-  TON: 5e3,
-  TRON: 3e3,
-  BTC: 6e5
-};
-var NATIVE_TOKEN_POOL_PAIRS = {
-  SOLANA: "SOLUSDT",
-  BSC: "BNBUSDT",
-  ETH: "ETHUSDT",
-  TON: "TONUSDT",
-  TRON: "TRXUSDT",
-  BTC: "BTCUSDT"
-};
-var CHAIN_IDS = {
-  BSC: 56,
-  ETH: 1
-};
-
 // src/Transaction/Transaction.ts
 var Transaction4 = class _Transaction {
   static get solana() {
@@ -876,74 +963,6 @@ var Transaction4 = class _Transaction {
 
 // src/Token/Token.ts
 import { JsonRpcProvider as JsonRpcProvider3, Contract as Contract3, getAddress } from "ethers";
-
-// src/utils/loaders.ts
-async function loadImage(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      return null;
-    }
-    return await res.blob();
-  } catch (error) {
-    return null;
-  }
-}
-
-// src/evm/getTokenIcon.ts
-async function getTokenIcon(network, address) {
-  if (network === NETWORKS.BSC) {
-    const url2 = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
-    const blob2 = await loadImage(url2);
-    return {
-      blob: blob2,
-      url: url2
-    };
-  }
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
-  );
-  const result = await res.json();
-  const url = result.image.small;
-  const blob = await loadImage(url);
-  return {
-    blob,
-    url
-  };
-}
-
-// src/evm/getTokenPrice.ts
-async function getTokenPrice(network, address) {
-  let usdPrice = null;
-  try {
-    if (network === NETWORKS.ETHEREUM) {
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
-      );
-      const data = await res.json();
-      const tokenData = data[address.toLowerCase()];
-      if (tokenData && tokenData.usd) {
-        usdPrice = tokenData.usd.toString();
-      }
-    } else if (network === NETWORKS.BSC) {
-      const res = await fetch(
-        `https://api.dexscreener.com/latest/dex/search?q=${address}`
-      );
-      const data = await res.json();
-      if (data.pairs && data.pairs.length > 0) {
-        const mainPair = data.pairs.sort(
-          (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
-        )[0];
-        usdPrice = mainPair.priceUsd ?? null;
-      }
-    }
-  } catch (error) {
-    console.error("Price API error:", error);
-  }
-  return usdPrice;
-}
-
-// src/Token/Token.ts
 var Token = class {
   static get solana() {
     return {
@@ -1157,8 +1176,13 @@ export {
   Transaction4 as Transaction,
   ethers,
   formatUnits,
+  getJettonWalletAddress,
   getRpcUrl,
   getSignaturesForAddress,
+  getTokenIcon,
+  getTokenPrice,
+  getTransfer,
   parseUnits,
-  solana
+  solana,
+  waitForTransaction
 };
