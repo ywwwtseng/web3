@@ -4,6 +4,7 @@ export { _solana_web3_js as solana };
 import * as ethers from 'ethers';
 import { Wallet, JsonRpcProvider, TransactionReceipt } from 'ethers';
 export { ethers };
+import * as _ton_core from '@ton/core';
 
 declare class KeyPair {
     static from(secretKey: string | Uint8Array): Keypair;
@@ -24,6 +25,7 @@ declare class AES256GCM {
 declare class KeyVaultService extends AES256GCM {
     get solana(): {
         generate: () => {
+            address: string;
             publicKey: _solana_web3_js.PublicKey;
             privateKeyEncrypted: string;
         };
@@ -36,6 +38,18 @@ declare class KeyVaultService extends AES256GCM {
             privateKeyEncrypted: string;
         };
         recover: (encryptedPrivateKey: string) => Wallet;
+    };
+    get ton(): {
+        generate: () => Promise<{
+            address: _ton_core.Address;
+            publicKey: Buffer<ArrayBufferLike>;
+            privateKeyEncrypted: string;
+        }>;
+        recover: (encryptedPrivateKey: string) => {
+            address: _ton_core.Address;
+            publicKey: Buffer<ArrayBuffer>;
+            privateKey: string;
+        };
     };
 }
 
@@ -71,6 +85,42 @@ type Transfer = {
     tokenAddress?: string;
 };
 
+declare const RPC_URL: {
+    BSC: string;
+    SOLANA_DEV: string;
+    SOLANA_MAIN: string;
+    ETHEREUM_MAINNET: (key: string) => string;
+    TON_MAINNET: string;
+};
+declare const NETWORKS: {
+    SOLANA: string;
+    BSC: string;
+    ETHEREUM: string;
+    TON: string;
+    TRON: string;
+    BTC: string;
+};
+declare const BLOCK_TIME_MS: {
+    SOLANA: number;
+    BSC: number;
+    ETH: number;
+    TON: number;
+    TRON: number;
+    BTC: number;
+};
+declare const NATIVE_TOKEN_POOL_PAIRS: {
+    SOLANA: string;
+    BSC: string;
+    ETH: string;
+    TON: string;
+    TRON: string;
+    BTC: string;
+};
+declare const CHAIN_IDS: {
+    BSC: number;
+    ETH: number;
+};
+
 declare class Transaction {
     static get solana(): {
         get: (connection: Connection, { signature, }: {
@@ -95,9 +145,21 @@ declare class Transaction {
             amount: string | bigint;
         }) => Promise<string>;
     };
-    static getGasFee(src: ParsedTransactionWithMeta | TransactionReceipt): string;
-    static getBlockTime(src: ParsedTransactionWithMeta | TransactionReceipt, rpcUrl: string): Promise<number>;
-    static getTransfer(src: string | ParsedTransactionWithMeta | TransactionReceipt, params: {
+    static get ton(): {
+        get: (boc: string, { rpcUrl, address }: {
+            rpcUrl: string;
+            address: string;
+        }) => Promise<_ton_core.Transaction>;
+    };
+    static getGasFee(txData: ParsedTransactionWithMeta | TransactionReceipt, { network }: {
+        network: (typeof NETWORKS)[keyof typeof NETWORKS];
+    }): string;
+    static getBlockTime(txData: ParsedTransactionWithMeta | TransactionReceipt, { network, rpcUrl, }: {
+        network: (typeof NETWORKS)[keyof typeof NETWORKS];
+        rpcUrl: string;
+    }): Promise<number>;
+    static getTransfer(txData: string | ParsedTransactionWithMeta | TransactionReceipt, params: {
+        network: (typeof NETWORKS)[keyof typeof NETWORKS];
         rpcUrl: string;
         source: string;
         destination: string;
@@ -144,41 +206,6 @@ declare function getRpcUrl(network: string, options?: {
 
 declare function formatUnits(value: string | bigint, decimals: number): string;
 declare function parseUnits(value: string, decimals: number): bigint;
-
-declare const RPC_URL: {
-    BSC: string;
-    SOLANA_DEV: string;
-    SOLANA_MAIN: string;
-    ETHEREUM_MAINNET: (key: string) => string;
-};
-declare const NETWORKS: {
-    SOLANA: string;
-    BSC: string;
-    ETHEREUM: string;
-    TON: string;
-    TRON: string;
-    BTC: string;
-};
-declare const BLOCK_TIME_MS: {
-    SOLANA: number;
-    BSC: number;
-    ETH: number;
-    TON: number;
-    TRON: number;
-    BTC: number;
-};
-declare const NATIVE_TOKEN_POOL_PAIRS: {
-    SOLANA: string;
-    BSC: string;
-    ETH: string;
-    TON: string;
-    TRON: string;
-    BTC: string;
-};
-declare const CHAIN_IDS: {
-    BSC: number;
-    ETH: number;
-};
 
 declare const ERC20_ABI: string[];
 

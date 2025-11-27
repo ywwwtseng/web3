@@ -36,6 +36,9 @@ async function getSignaturesForAddress(connection, {
 
 // src/KeyVaultService/KeyVaultService.ts
 import { Wallet } from "ethers";
+import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
+import { WalletContractV5R1 } from "@ton/ton";
+import TonWeb from "tonweb";
 
 // src/utils/AES256GCM.ts
 import crypto from "crypto";
@@ -83,6 +86,7 @@ var KeyVaultService = class extends AES256GCM {
         const hexPrivateKey = Buffer.from(wallet.secretKey).toString("hex");
         const encryptedPrivateKey = this.encrypt(hexPrivateKey);
         return {
+          address: wallet.publicKey.toString(),
           publicKey: wallet.publicKey,
           privateKeyEncrypted: encryptedPrivateKey
         };
@@ -107,6 +111,41 @@ var KeyVaultService = class extends AES256GCM {
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
         return new Wallet(decryptedHex);
+      }
+    };
+  }
+  get ton() {
+    return {
+      generate: async () => {
+        const mnemonic = await mnemonicNew(24);
+        const keyPair = await mnemonicToWalletKey(mnemonic);
+        const hexPrivateKey = Buffer.from(keyPair.secretKey).toString("hex");
+        const encryptedPrivateKey = this.encrypt(hexPrivateKey);
+        const wallet = WalletContractV5R1.create({
+          workchain: 0,
+          publicKey: keyPair.publicKey
+        });
+        return {
+          address: wallet.address,
+          publicKey: keyPair.publicKey,
+          privateKeyEncrypted: encryptedPrivateKey
+        };
+      },
+      recover: (encryptedPrivateKey) => {
+        const decryptedHex = this.decrypt(encryptedPrivateKey);
+        const keyPair = TonWeb.utils.nacl.sign.keyPair.fromSecretKey(
+          Buffer.from(decryptedHex, "hex")
+        );
+        const publicKey = Buffer.from(keyPair.publicKey);
+        const wallet = WalletContractV5R1.create({
+          workchain: 0,
+          publicKey
+        });
+        return {
+          address: wallet.address,
+          publicKey,
+          privateKey: decryptedHex
+        };
       }
     };
   }
@@ -491,6 +530,9 @@ async function decodeTransfer(connection, base64) {
   throw new Error("Invalid transfer transaction");
 }
 
+// src/Transaction/Transaction.ts
+import { Cell, TonClient as TonClient2 } from "@ton/ton";
+
 // src/solana/getTransfers.ts
 function getTransfers(parsedTransaction) {
   const transfers = [];
@@ -603,8 +645,89 @@ async function getTransfer({
   return null;
 }
 
+// src/ton/waitForTransaction.ts
+import {
+  Address,
+  beginCell,
+  storeMessage
+} from "@ton/ton";
+var waitForTransaction = async (options, client) => {
+  const { hash, refetchInterval = 1e3, refetchLimit, address } = options;
+  return new Promise((resolve) => {
+    let refetches = 0;
+    const walletAddress = Address.parse(address);
+    const interval = setInterval(async () => {
+      refetches += 1;
+      console.log("waiting transaction...");
+      const state = await client.getContractState(walletAddress);
+      if (!state || !state.lastTransaction) {
+        clearInterval(interval);
+        resolve(null);
+        return;
+      }
+      const lastLt = state.lastTransaction.lt;
+      const lastHash = state.lastTransaction.hash;
+      const lastTx = await client.getTransaction(
+        walletAddress,
+        lastLt,
+        lastHash
+      );
+      if (lastTx && lastTx.inMessage) {
+        const msgCell = beginCell().store(storeMessage(lastTx.inMessage)).endCell();
+        const inMsgHash = msgCell.hash().toString("base64");
+        console.log("InMsgHash", inMsgHash);
+        if (inMsgHash === hash) {
+          clearInterval(interval);
+          resolve(lastTx);
+        }
+      }
+      if (refetchLimit && refetches >= refetchLimit) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, refetchInterval);
+  });
+};
+
+// src/constants.ts
+var RPC_URL = {
+  BSC: "https://bsc-dataseed.binance.org/",
+  SOLANA_DEV: "https://api.devnet.solana.com",
+  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
+  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`,
+  TON_MAINNET: "https://mainnet.evercloud.dev"
+};
+var NETWORKS = {
+  SOLANA: "solana",
+  BSC: "bsc",
+  ETHEREUM: "ethereum",
+  TON: "ton",
+  TRON: "tron",
+  BTC: "bitcoin"
+};
+var BLOCK_TIME_MS = {
+  SOLANA: 400,
+  BSC: 750,
+  ETH: 12e3,
+  TON: 5e3,
+  TRON: 3e3,
+  BTC: 6e5
+};
+var NATIVE_TOKEN_POOL_PAIRS = {
+  SOLANA: "SOLUSDT",
+  BSC: "BNBUSDT",
+  ETH: "ETHUSDT",
+  TON: "TONUSDT",
+  TRON: "TRXUSDT",
+  BTC: "BTCUSDT"
+};
+var CHAIN_IDS = {
+  BSC: 56,
+  ETH: 1
+};
+
 // src/Transaction/Transaction.ts
-var Transaction3 = class _Transaction {
+var Transaction4 = class _Transaction {
   static get solana() {
     return {
       get: async (connection, {
@@ -686,35 +809,64 @@ var Transaction3 = class _Transaction {
       }
     };
   }
-  static getGasFee(src) {
-    if ("meta" in src) {
-      return _Transaction.solana.getGasFee(src);
-    } else {
-      return _Transaction.evm.getGasFee(src);
+  static get ton() {
+    return {
+      get: async (boc, { rpcUrl, address }) => {
+        const cell = Cell.fromBase64(boc);
+        const buffer = cell.hash();
+        const txHash = buffer.toString("hex");
+        const client = new TonClient2({
+          endpoint: rpcUrl
+        });
+        const transaction = await waitForTransaction(
+          { hash: txHash, address },
+          client
+        );
+        return transaction;
+      }
+    };
+  }
+  static getGasFee(txData, { network }) {
+    if (network === NETWORKS.SOLANA) {
+      return _Transaction.solana.getGasFee(txData);
+    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
+      return _Transaction.evm.getGasFee(txData);
     }
   }
-  static async getBlockTime(src, rpcUrl) {
-    if ("meta" in src) {
-      return _Transaction.solana.getBlockTime(src);
-    } else {
+  static async getBlockTime(txData, {
+    network,
+    rpcUrl
+  }) {
+    if (network === NETWORKS.SOLANA) {
+      return _Transaction.solana.getBlockTime(
+        txData
+      );
+    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
       const provider = new JsonRpcProvider2(rpcUrl);
-      return await _Transaction.evm.getBlockTime(provider, src);
+      return await _Transaction.evm.getBlockTime(
+        provider,
+        txData
+      );
     }
   }
-  static async getTransfer(src, params) {
-    if (params.source.startsWith("0x")) {
-      const receipt = src;
+  static async getTransfer(txData, params) {
+    if (params.network === NETWORKS.ETHEREUM || params.network === NETWORKS.BSC) {
       const provider = new JsonRpcProvider2(params.rpcUrl);
-      const transfer = await _Transaction.evm.getTransfer(provider, receipt);
+      const transfer = await _Transaction.evm.getTransfer(
+        provider,
+        txData
+      );
       if (transfer && transfer.source === params.source && transfer.destination === params.destination) {
         return transfer;
       } else {
         return null;
       }
-    } else {
-      const tx = src;
+    } else if (params.network === NETWORKS.SOLANA) {
       const connection = new Connection6(params.rpcUrl);
-      const transfers = await _Transaction.solana.getTransfers(connection, tx);
+      const transfers = await _Transaction.solana.getTransfers(
+        connection,
+        txData
+      );
       return transfers.find(
         (transfer) => transfer.source === params.source && transfer.destination === params.destination
       ) ?? null;
@@ -737,42 +889,6 @@ async function loadImage(url) {
     return null;
   }
 }
-
-// src/constants.ts
-var RPC_URL = {
-  BSC: "https://bsc-dataseed.binance.org/",
-  SOLANA_DEV: "https://api.devnet.solana.com",
-  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
-  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`
-};
-var NETWORKS = {
-  SOLANA: "solana",
-  BSC: "bsc",
-  ETHEREUM: "ethereum",
-  TON: "ton",
-  TRON: "tron",
-  BTC: "bitcoin"
-};
-var BLOCK_TIME_MS = {
-  SOLANA: 400,
-  BSC: 750,
-  ETH: 12e3,
-  TON: 5e3,
-  TRON: 3e3,
-  BTC: 6e5
-};
-var NATIVE_TOKEN_POOL_PAIRS = {
-  SOLANA: "SOLUSDT",
-  BSC: "BNBUSDT",
-  ETH: "ETHUSDT",
-  TON: "TONUSDT",
-  TRON: "TRXUSDT",
-  BTC: "BTCUSDT"
-};
-var CHAIN_IDS = {
-  BSC: 56,
-  ETH: 1
-};
 
 // src/evm/getTokenIcon.ts
 async function getTokenIcon(network, address) {
@@ -1004,7 +1120,7 @@ export {
   NETWORKS,
   RPC_URL,
   Token,
-  Transaction3 as Transaction,
+  Transaction4 as Transaction,
   ethers,
   formatUnits,
   getRpcUrl,

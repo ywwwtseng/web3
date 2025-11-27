@@ -10,10 +10,13 @@ import {
   CreateTransactionParams,
 } from '../solana/createTransaction';
 import { decodeTransfer } from '../solana/decodeTransfer';
+import { Cell, TonClient } from '@ton/ton';
 import { getTransfers } from '../solana/getTransfers';
 import { getTransfer } from '../evm/getTransfer';
+import { waitForTransaction } from '../ton/waitForTransaction';
 import type { Transfer } from '../types';
 import { ERC20_ABI } from '../abi/ERC20_ABI';
+import { NETWORKS } from '../constants';
 
 export class Transaction {
   static get solana() {
@@ -138,38 +141,82 @@ export class Transaction {
     };
   }
 
-  static getGasFee(src: ParsedTransactionWithMeta | TransactionReceipt) {
-    if ('meta' in src) {
-      return Transaction.solana.getGasFee(src);
-    } else {
-      return Transaction.evm.getGasFee(src);
+  static get ton() {
+    return {
+      get: async (
+        boc: string,
+        { rpcUrl, address }: { rpcUrl: string; address: string }
+      ) => {
+        const cell = Cell.fromBase64(boc);
+        const buffer = cell.hash();
+        const txHash = buffer.toString('hex');
+
+        const client = new TonClient({
+          endpoint: rpcUrl,
+        });
+
+        const transaction = await waitForTransaction(
+          { hash: txHash, address },
+          client
+        );
+
+        return transaction;
+      },
+    };
+  }
+
+  static getGasFee(
+    txData: ParsedTransactionWithMeta | TransactionReceipt,
+    { network }: { network: (typeof NETWORKS)[keyof typeof NETWORKS] }
+  ) {
+    if (network === NETWORKS.SOLANA) {
+      return Transaction.solana.getGasFee(txData as ParsedTransactionWithMeta);
+    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
+      return Transaction.evm.getGasFee(txData as TransactionReceipt);
     }
   }
 
   static async getBlockTime(
-    src: ParsedTransactionWithMeta | TransactionReceipt,
-    rpcUrl: string
+    txData: ParsedTransactionWithMeta | TransactionReceipt,
+    {
+      network,
+      rpcUrl,
+    }: {
+      network: (typeof NETWORKS)[keyof typeof NETWORKS];
+      rpcUrl: string;
+    }
   ) {
-    if ('meta' in src) {
-      return Transaction.solana.getBlockTime(src);
-    } else {
+    if (network === NETWORKS.SOLANA) {
+      return Transaction.solana.getBlockTime(
+        txData as ParsedTransactionWithMeta
+      );
+    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
       const provider = new JsonRpcProvider(rpcUrl);
-      return await Transaction.evm.getBlockTime(provider, src);
+      return await Transaction.evm.getBlockTime(
+        provider,
+        txData as TransactionReceipt
+      );
     }
   }
 
   static async getTransfer(
-    src: string | ParsedTransactionWithMeta | TransactionReceipt,
+    txData: string | ParsedTransactionWithMeta | TransactionReceipt,
     params: {
+      network: (typeof NETWORKS)[keyof typeof NETWORKS];
       rpcUrl: string;
       source: string;
       destination: string;
     }
   ): Promise<Transfer | null> {
-    if (params.source.startsWith('0x')) {
-      const receipt = src as TransactionReceipt | null;
+    if (
+      params.network === NETWORKS.ETHEREUM ||
+      params.network === NETWORKS.BSC
+    ) {
       const provider = new JsonRpcProvider(params.rpcUrl);
-      const transfer = await Transaction.evm.getTransfer(provider, receipt);
+      const transfer = await Transaction.evm.getTransfer(
+        provider,
+        txData as string | TransactionReceipt
+      );
       if (
         transfer &&
         transfer.source === params.source &&
@@ -179,10 +226,12 @@ export class Transaction {
       } else {
         return null;
       }
-    } else {
-      const tx = src as ParsedTransactionWithMeta | null;
+    } else if (params.network === NETWORKS.SOLANA) {
       const connection = new Connection(params.rpcUrl);
-      const transfers = await Transaction.solana.getTransfers(connection, tx);
+      const transfers = await Transaction.solana.getTransfers(
+        connection,
+        txData as string | ParsedTransactionWithMeta
+      );
 
       return (
         transfers.find(

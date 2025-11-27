@@ -3,6 +3,7 @@ export const RPC_URL = {
   SOLANA_DEV: 'https://api.devnet.solana.com',
   SOLANA_MAIN: 'https://api.mainnet-beta.solana.com',
   ETHEREUM_MAINNET: (key: string) => `https://mainnet.infura.io/v3/${key}`,
+  TON_MAINNET: 'https://mainnet.evercloud.dev',
 };
 
 export const NETWORKS = {
