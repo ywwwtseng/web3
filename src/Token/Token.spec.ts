@@ -45,6 +45,35 @@ describe('Token', () => {
     expect(token.address).toBe('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
     expect(token.name).toBe('USD Coin');
     expect(token.symbol).toBe('USDC');
+    expect(token.decimals).toBe(6);
+    expect(token.usdPrice).not.toBeNull();
+  });
+
+  test('TON Network get USDC token info', async () => {
+    const token = await Token.getInfo({
+      address: 'EQB-MPwrd1G6WKNkLz_VnV6WqBDd142KMQv-g1O-8QUA3728',
+      network: NETWORKS.TON,
+    });
+    expect(token).toBeDefined();
+    expect(token.address).toBe(
+      'EQB-MPwrd1G6WKNkLz_VnV6WqBDd142KMQv-g1O-8QUA3728'
+    );
+    expect(token.name).toBe('Bridged USD Coin (TON Bridge)');
+    expect(token.symbol).toBe('jusdc');
+    expect(token.decimals).toBe(6);
+    expect(token.usdPrice).not.toBeNull();
+  });
+
+  test('TRON Network get USDC token info', async () => {
+    const token = await Token.getInfo({
+      address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
+      network: NETWORKS.TRON,
+    });
+    expect(token).toBeDefined();
+    expect(token.address).toBe('TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8');
+    expect(token.name).toBe('USDC');
+    expect(token.symbol).toBe('usdc');
+    expect(token.decimals).toBe(6);
     expect(token.usdPrice).not.toBeNull();
   });
 });

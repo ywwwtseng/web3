@@ -125,10 +125,16 @@ declare class Token {
             rpcUrl: string;
         }) => Promise<TokenInfo>;
     };
+    static get ton(): {
+        getInfo: (address: string) => Promise<TokenInfo>;
+    };
+    static get tron(): {
+        getInfo: (address: string) => Promise<TokenInfo>;
+    };
     static getInfo({ address, network, rpcUrl, }: {
         address: string;
         network: string;
-        rpcUrl: string;
+        rpcUrl?: string;
     }): Promise<TokenInfo>;
 }
 

@@ -58,6 +58,7 @@ export class Token {
       },
     };
   }
+  // ethereum
   static get evm() {
     return {
       getInfo: async ({
@@ -99,6 +100,98 @@ export class Token {
     };
   }
 
+  static get ton() {
+    return {
+      getInfo: async (address: string): Promise<TokenInfo> => {
+        const res = await fetch(
+          `https://api.coingecko.com/api/v3/coins/ton/contract/${address}`
+        );
+
+        const data = (await res.json()) as {
+          name: string;
+          symbol: string;
+          detail_platforms: {
+            'the-open-network': {
+              decimal_place: number;
+              contract_address: string;
+            };
+          };
+          image: {
+            thumb: string;
+            small: string;
+            large: string;
+          };
+          market_data: {
+            low_24h: {
+              usd: number;
+            };
+          };
+        };
+
+        const blob = await loadImage(data.image.small);
+
+        return {
+          name: data.name,
+          symbol: data.symbol,
+          decimals: data.detail_platforms['the-open-network'].decimal_place,
+          address: data.detail_platforms['the-open-network'].contract_address,
+          icon: data.image.small,
+          icon_file: blob
+            ? new File([blob], data.symbol.toLowerCase(), { type: blob.type })
+            : undefined,
+          tokenProgram: undefined,
+          usdPrice: data.market_data.low_24h.usd.toString(),
+        };
+      },
+    };
+  }
+
+  static get tron() {
+    return {
+      getInfo: async (address: string): Promise<TokenInfo> => {
+        const res = await fetch(
+          `https://api.coingecko.com/api/v3/coins/tron/contract/${address}`
+        );
+
+        const data = (await res.json()) as {
+          name: string;
+          symbol: string;
+          detail_platforms: {
+            tron: {
+              decimal_place: number;
+              contract_address: string;
+            };
+          };
+          image: {
+            thumb: string;
+            small: string;
+            large: string;
+          };
+          market_data: {
+            low_24h: {
+              usd: number;
+            };
+          };
+        };
+
+        const blob = await loadImage(data.image.small);
+
+        return {
+          name: data.name,
+          symbol: data.symbol,
+          decimals: data.detail_platforms['tron'].decimal_place,
+          address: data.detail_platforms['tron'].contract_address,
+          icon: data.image.small,
+          icon_file: blob
+            ? new File([blob], data.symbol.toLowerCase(), { type: blob.type })
+            : undefined,
+          tokenProgram: undefined,
+          usdPrice: data.market_data.low_24h.usd.toString(),
+        };
+      },
+    };
+  }
+
   static async getInfo({
     address,
     network,
@@ -106,12 +199,23 @@ export class Token {
   }: {
     address: string;
     network: string;
-    rpcUrl: string;
+    rpcUrl?: string;
   }): Promise<TokenInfo> {
     if (network === NETWORKS.SOLANA) {
       return await this.solana.getInfo(address);
-    } else {
+    } else if (network === NETWORKS.TON) {
+      return await this.ton.getInfo(address);
+    } else if (network === NETWORKS.TRON) {
+      return await this.tron.getInfo(address);
+    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
+      if (!rpcUrl) {
+        throw new Error('RPC URL is required for getting EVM token info');
+      }
       return await this.evm.getInfo({ rpcUrl, network, address });
+    } else {
+      throw new Error('message.network_not_supported', {
+        cause: `Network ${network} not supported`,
+      });
     }
   }
 }
