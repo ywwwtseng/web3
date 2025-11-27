@@ -1009,21 +1009,50 @@ var Token = class {
   static get ton() {
     return {
       getInfo: async (address) => {
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/ton/contract/${address}`
-        );
-        const data = await res.json();
-        const blob = await loadImage(data.image.small);
-        return {
-          name: data.name,
-          symbol: data.symbol,
-          decimals: data.detail_platforms["the-open-network"].decimal_place,
-          address: data.detail_platforms["the-open-network"].contract_address,
-          icon: data.image.small,
-          icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
-          tokenProgram: void 0,
-          usdPrice: data.market_data.low_24h.usd.toString()
-        };
+        if (address === "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs") {
+          const res = await fetch(`https://tonapi.io/v2/jettons/${address}`);
+          const data = await res.json();
+          if (data.error) {
+            throw new Error("message.token_not_found", {
+              cause: `Token ${address} not found`
+            });
+          }
+          const blob = await loadImage(data.metadata.image);
+          return {
+            name: data.metadata.name,
+            symbol: data.metadata.symbol,
+            decimals: Number(data.metadata.decimals),
+            address,
+            icon: data.metadata.image,
+            icon_file: blob ? new File([blob], data.metadata.symbol.toLowerCase(), {
+              type: blob.type
+            }) : void 0,
+            tokenProgram: void 0,
+            usdPrice: "1"
+          };
+        } else {
+          const res = await fetch(
+            `https://api.coingecko.com/api/v3/coins/ton/contract/${address}`
+          );
+          const data = await res.json();
+          if (data.error) {
+            throw new Error("message.token_not_found", {
+              cause: `Token ${address} not found`
+            });
+          }
+          console.log(data, "data");
+          const blob = await loadImage(data.image.small);
+          return {
+            name: data.name,
+            symbol: data.symbol,
+            decimals: data.detail_platforms["the-open-network"].decimal_place,
+            address: data.detail_platforms["the-open-network"].contract_address,
+            icon: data.image.small,
+            icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
+            tokenProgram: void 0,
+            usdPrice: data.market_data.low_24h.usd.toString()
+          };
+        }
       }
     };
   }
@@ -1034,6 +1063,11 @@ var Token = class {
           `https://api.coingecko.com/api/v3/coins/tron/contract/${address}`
         );
         const data = await res.json();
+        if (data.error) {
+          throw new Error("message.token_not_found", {
+            cause: `Token ${address} not found`
+          });
+        }
         const blob = await loadImage(data.image.small);
         return {
           name: data.name,

@@ -64,6 +64,21 @@ describe('Token', () => {
     expect(token.usdPrice).not.toBeNull();
   });
 
+  test('TON Network get USDT token info', async () => {
+    const token = await Token.getInfo({
+      address: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+      network: NETWORKS.TON,
+    });
+    expect(token).toBeDefined();
+    expect(token.address).toBe(
+      'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
+    );
+    expect(token.name).toBe('Tether USD');
+    expect(token.symbol).toBe('USD₮');
+    expect(token.decimals).toBe(6);
+    expect(token.usdPrice).not.toBeNull();
+  });
+
   test('TRON Network get USDC token info', async () => {
     const token = await Token.getInfo({
       address: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
