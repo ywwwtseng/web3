@@ -1,11 +1,22 @@
 import * as _solana_web3_js from '@solana/web3.js';
-import { Keypair, Connection, SignaturesForAddressOptions, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.js';
+import { Keypair, Connection, SignaturesForAddressOptions, PublicKey, Transaction, ParsedTransactionWithMeta } from '@solana/web3.js';
 export { _solana_web3_js as solana };
+import { JsonRpcProvider, Wallet, TransactionReceipt } from 'ethers';
 import * as ethers from 'ethers';
-import { TransactionReceipt, TransactionResponse, Wallet, JsonRpcProvider } from 'ethers';
 export { ethers };
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { TonClient, Transaction as Transaction$1 } from '@ton/ton';
 import * as _ton_core from '@ton/core';
+import TonWeb from 'tonweb';
+
+declare function formatUnits(value: string | bigint, decimals: number): string;
+declare function parseUnits(value: string, decimals: number): bigint;
+
+declare function loadImage(url: string): Promise<Blob | null>;
+
+declare function getRpcUrl(network: string, options?: {
+    infuraApiKey?: string;
+}): string;
 
 declare class KeyPair {
     static from(secretKey: string | Uint8Array): Keypair;
@@ -16,6 +27,66 @@ declare function getSignaturesForAddress(connection: Connection, { address, ...o
     address: string;
 } & SignaturesForAddressOptions): Promise<string[]>;
 
+declare function hasATA(connection: Connection, mintAddress: string | PublicKey, ownerAddress: string | PublicKey, tokenProgram: typeof TOKEN_PROGRAM_ID | typeof TOKEN_2022_PROGRAM_ID): Promise<boolean>;
+declare function createATAInstruction(payer: PublicKey, mint: PublicKey, owner: PublicKey, tokenProgram: typeof TOKEN_PROGRAM_ID | typeof TOKEN_2022_PROGRAM_ID): _solana_web3_js.TransactionInstruction;
+declare function createSolanaTransaction({ source, destination, amount, }: {
+    source: string | PublicKey;
+    destination: string | PublicKey;
+    amount: bigint | string | number;
+}): Promise<Transaction>;
+declare function createSPLTransaction(connection: Connection, { feePayer, source, destination, amount, mint, tokenProgram, }: {
+    feePayer: string | PublicKey;
+    source: string | PublicKey;
+    destination: string | PublicKey;
+    amount: bigint | string | number;
+    mint: string | PublicKey;
+    tokenProgram?: string | PublicKey | null;
+}): Promise<Transaction>;
+interface CreateTransactionParams {
+    feePayer: string | PublicKey;
+    source: string | PublicKey;
+    destination: string | PublicKey;
+    amount: bigint | string | number;
+    mint?: string | PublicKey | null;
+    tokenProgram?: string | PublicKey | null;
+}
+declare function createTransaction(connection: Connection, { feePayer, source, destination, amount, mint, tokenProgram, }: CreateTransactionParams): Promise<Transaction>;
+
+type Transfer = {
+    source: string;
+    destination: string;
+    amount: string;
+    tokenAddress?: string;
+};
+
+declare function decodeTransfer(connection: Connection, base64: string): Promise<Transfer>;
+
+declare function getAccountInfo(connection: Connection, publicKey: string | PublicKey): Promise<{
+    owner: string | undefined;
+    mint: string | undefined;
+}>;
+
+declare function getParsedTransaction({ connection, signature, }: {
+    connection: Connection;
+    signature: string;
+}): Promise<_solana_web3_js.ParsedTransactionWithMeta>;
+
+type index$3_CreateTransactionParams = CreateTransactionParams;
+type index$3_KeyPair = KeyPair;
+declare const index$3_KeyPair: typeof KeyPair;
+declare const index$3_createATAInstruction: typeof createATAInstruction;
+declare const index$3_createSPLTransaction: typeof createSPLTransaction;
+declare const index$3_createSolanaTransaction: typeof createSolanaTransaction;
+declare const index$3_createTransaction: typeof createTransaction;
+declare const index$3_decodeTransfer: typeof decodeTransfer;
+declare const index$3_getAccountInfo: typeof getAccountInfo;
+declare const index$3_getParsedTransaction: typeof getParsedTransaction;
+declare const index$3_getSignaturesForAddress: typeof getSignaturesForAddress;
+declare const index$3_hasATA: typeof hasATA;
+declare namespace index$3 {
+  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_hasATA as hasATA };
+}
+
 declare function getJettonWalletAddress(minterAddress: string, ownerAddress: string): Promise<string>;
 
 declare const waitForTransaction: (options: {
@@ -25,24 +96,39 @@ declare const waitForTransaction: (options: {
     address: string;
 }, client: TonClient) => Promise<Transaction$1 | null>;
 
-declare function getTokenIcon(network: string, address: string): Promise<{
-    blob: Blob;
-    url: any;
-}>;
+declare function getTransaction({ boc, address, client, }: {
+    boc: string;
+    client: TonClient;
+    address: string;
+}): Promise<_ton_core.Transaction>;
 
-declare function getTokenPrice(network: string, address: string): Promise<string>;
+declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
+declare const index$2_getTransaction: typeof getTransaction;
+declare const index$2_waitForTransaction: typeof waitForTransaction;
+declare namespace index$2 {
+  export { index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_waitForTransaction as waitForTransaction };
+}
 
-type Transfer = {
-    source: string;
-    destination: string;
-    amount: string;
+declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {
+    provider: JsonRpcProvider;
     tokenAddress?: string;
-};
+    signer?: Wallet;
+    destination?: string;
+    amount?: string | bigint;
+}): Promise<string>;
 
-declare function getTransfer({ receipt, transaction, }: {
-    receipt: TransactionReceipt;
-    transaction: TransactionResponse;
-}): Promise<Transfer | null>;
+declare const index$1_estimateFee: typeof estimateFee;
+declare namespace index$1 {
+  export { index$1_estimateFee as estimateFee };
+}
+
+declare const index_formatUnits: typeof formatUnits;
+declare const index_getRpcUrl: typeof getRpcUrl;
+declare const index_loadImage: typeof loadImage;
+declare const index_parseUnits: typeof parseUnits;
+declare namespace index {
+  export { index$1 as evm, index_formatUnits as formatUnits, index_getRpcUrl as getRpcUrl, index_loadImage as loadImage, index_parseUnits as parseUnits, index$3 as solana, index$2 as ton };
+}
 
 declare class AES256GCM {
     private key;
@@ -82,37 +168,36 @@ declare class KeyVaultService extends AES256GCM {
     };
 }
 
-declare class Balance {
-    static get solana(): {
-        get: (connection: Connection, { address, tokenAddress, tokenProgram, }: {
-            address: string;
-            tokenAddress?: string | null;
-            tokenProgram?: string | null;
-        }) => Promise<number | bigint>;
-    };
-    static get evm(): {
-        get: (provider: JsonRpcProvider, { address, tokenAddress, }: {
-            address: string;
-            tokenAddress?: string | null;
-        }) => Promise<any>;
-    };
-}
+declare function getBalance({ network, provider, connection, }: {
+    network: string;
+    provider?: JsonRpcProvider | InstanceType<typeof TonWeb.HttpProvider>;
+    connection?: Connection;
+}): ({ address, tokenAddress, tokenProgram, }: {
+    address: string;
+    tokenAddress?: string | null;
+    tokenProgram?: string | null;
+}) => Promise<string>;
 
-interface CreateTransactionParams {
-    feePayer: string | PublicKey;
-    source: string | PublicKey;
-    destination: string | PublicKey;
-    amount: bigint | string | number;
-    mint?: string | PublicKey | null;
-    tokenProgram?: string | PublicKey | null;
+interface TokenInfo {
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+    icon: string;
+    icon_file?: File;
+    tokenProgram?: string;
+    usdPrice: string | null;
 }
+declare function getTokenInfo({ network, provider, }: {
+    network: string;
+    provider?: JsonRpcProvider;
+}): (address: string) => Promise<TokenInfo>;
 
 declare const RPC_URL: {
     BSC: string;
     SOLANA_DEV: string;
     SOLANA_MAIN: string;
     ETHEREUM_MAINNET: (key: string) => string;
-    TON_MAINNET: string;
 };
 declare const NETWORKS: {
     SOLANA: string;
@@ -138,97 +223,24 @@ declare const NATIVE_TOKEN_POOL_PAIRS: {
     TRON: string;
     BTC: string;
 };
-declare const CHAIN_IDS: {
-    BSC: number;
-    ETH: number;
-};
 
-declare class Transaction {
-    static get solana(): {
-        get: (connection: Connection, { signature, }: {
-            signature: string;
-        }) => Promise<ParsedTransactionWithMeta>;
-        create: (connection: Connection, params: CreateTransactionParams) => Promise<_solana_web3_js.Transaction>;
-        decodeTransfer: (connection: Connection, base64: string) => Promise<Transfer>;
-        getTransfers: (connection: Connection, src: string | ParsedTransactionWithMeta) => Promise<Transfer[]>;
-        getGasFee: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => string;
-        getBlockTime: (parsedTransactionWithMeta: ParsedTransactionWithMeta) => number;
-    };
-    static get evm(): {
-        get: (provider: JsonRpcProvider, txHash: string) => Promise<ethers.TransactionResponse>;
-        getReceipt: (provider: JsonRpcProvider, txHash: string) => Promise<TransactionReceipt>;
-        getTransfer: (provider: JsonRpcProvider, src: string | TransactionReceipt) => Promise<Transfer>;
-        getGasFee: (receipt: TransactionReceipt) => string;
-        getBlockTime: (provider: JsonRpcProvider, receipt: TransactionReceipt) => Promise<number>;
-        estimateFee: (provider: JsonRpcProvider, params?: {
-            tokenAddress: string;
-            signer: Wallet;
-            destination: string;
-            amount: string | bigint;
-        }) => Promise<string>;
-    };
-    static get ton(): {
-        get: (boc: string, { rpcUrl, address }: {
-            rpcUrl: string;
-            address: string;
-        }) => Promise<_ton_core.Transaction>;
-    };
-    static getGasFee(txData: ParsedTransactionWithMeta | TransactionReceipt, { network }: {
-        network: (typeof NETWORKS)[keyof typeof NETWORKS];
-    }): string;
-    static getBlockTime(txData: ParsedTransactionWithMeta | TransactionReceipt, { network, rpcUrl, }: {
-        network: (typeof NETWORKS)[keyof typeof NETWORKS];
-        rpcUrl: string;
-    }): Promise<number>;
-    static getTransfer(txData: string | ParsedTransactionWithMeta | TransactionReceipt, params: {
-        network: (typeof NETWORKS)[keyof typeof NETWORKS];
-        rpcUrl: string;
-        source: string;
-        destination: string;
-    }): Promise<Transfer | null>;
-}
+declare function getGasFee({ network, }: {
+    network: (typeof NETWORKS)[keyof typeof NETWORKS];
+}): (txData: string | TransactionReceipt | ParsedTransactionWithMeta) => Promise<string>;
 
-interface TokenInfo {
-    name: string;
-    symbol: string;
-    decimals: number;
-    address: string;
-    icon: string;
-    icon_file?: File;
-    tokenProgram?: string;
-    usdPrice: string | null;
-}
-declare class Token {
-    static get solana(): {
-        getInfo: (address: string) => Promise<TokenInfo>;
-    };
-    static get evm(): {
-        getInfo: ({ address, network, rpcUrl, }: {
-            address: string;
-            network: string;
-            rpcUrl: string;
-        }) => Promise<TokenInfo>;
-    };
-    static get ton(): {
-        getInfo: (address: string) => Promise<TokenInfo>;
-    };
-    static get tron(): {
-        getInfo: (address: string) => Promise<TokenInfo>;
-    };
-    static getInfo({ address, network, rpcUrl, }: {
-        address: string;
-        network: string;
-        rpcUrl?: string;
-    }): Promise<TokenInfo>;
-}
+declare function getBlockTime({ network, provider, }: {
+    network: (typeof NETWORKS)[keyof typeof NETWORKS];
+    provider?: JsonRpcProvider;
+}): (txData: TransactionReceipt | ParsedTransactionWithMeta) => Promise<number>;
 
-declare function getRpcUrl(network: string, options?: {
-    infuraApiKey?: string;
-}): string;
-
-declare function formatUnits(value: string | bigint, decimals: number): string;
-declare function parseUnits(value: string, decimals: number): bigint;
+declare function getTransfer({ network, provider, connection, source, destination, }: {
+    network: string;
+    provider?: JsonRpcProvider;
+    connection?: Connection;
+    source: string;
+    destination: string;
+}): (txData: string | TransactionReceipt | ParsedTransactionWithMeta) => Promise<Transfer>;
 
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, Balance, CHAIN_IDS, ERC20_ABI, KeyPair, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, Token, type TokenInfo, Transaction, type Transfer, formatUnits, getJettonWalletAddress, getRpcUrl, getSignaturesForAddress, getTokenIcon, getTokenPrice, getTransfer, parseUnits, waitForTransaction };
+export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, index as utils };

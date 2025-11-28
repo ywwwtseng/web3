@@ -1,9 +1,8 @@
 export const RPC_URL = {
-  BSC: 'https://bsc-dataseed.binance.org/',
+  BSC: 'https://bsc-dataseed.binance.org',
   SOLANA_DEV: 'https://api.devnet.solana.com',
   SOLANA_MAIN: 'https://api.mainnet-beta.solana.com',
   ETHEREUM_MAINNET: (key: string) => `https://mainnet.infura.io/v3/${key}`,
-  TON_MAINNET: 'https://mainnet.evercloud.dev',
 };
 
 export const NETWORKS = {
@@ -31,9 +30,4 @@ export const NATIVE_TOKEN_POOL_PAIRS = {
   TON: 'TONUSDT',
   TRON: 'TRXUSDT',
   BTC: 'BTCUSDT',
-};
-
-export const CHAIN_IDS = {
-  BSC: 56,
-  ETH: 1,
 };
