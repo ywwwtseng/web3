@@ -6,22 +6,24 @@ import {
   Transaction,
 } from '@ton/ton';
 
-export const waitForTransaction = async (
-  options: {
-    hash: string;
-    refetchInterval?: number;
-    refetchLimit?: number;
-    address: string;
-  },
-  client: TonClient
-): Promise<Transaction | null> => {
-  const { hash, refetchInterval = 1000, refetchLimit, address } = options;
+export async function waitForTransaction({
+  client,
+  hash,
+  refetchInterval = 1000,
+  refetchLimit,
+  address,
+}: {
+  client: TonClient;
+  hash: string;
+  refetchInterval?: number;
+  refetchLimit?: number;
+  address: string;
+}): Promise<Transaction | null> {
   return new Promise((resolve) => {
     let refetches = 0;
     const walletAddress = Address.parse(address);
     const interval = setInterval(async () => {
       refetches += 1;
-      console.log('waiting transaction...');
       const state = await client.getContractState(walletAddress);
       if (!state || !state.lastTransaction) {
         clearInterval(interval);
@@ -35,12 +37,12 @@ export const waitForTransaction = async (
         lastLt,
         lastHash
       );
+
       if (lastTx && lastTx.inMessage) {
         const msgCell = beginCell()
           .store(storeMessage(lastTx.inMessage))
           .endCell();
-        const inMsgHash = msgCell.hash().toString('base64');
-        console.log('InMsgHash', inMsgHash);
+        const inMsgHash = msgCell.hash().toString('hex');
         if (inMsgHash === hash) {
           clearInterval(interval);
           resolve(lastTx);
@@ -52,4 +54,4 @@ export const waitForTransaction = async (
       }
     }, refetchInterval);
   });
-};
+}

@@ -2,22 +2,21 @@ import { Cell, TonClient } from '@ton/ton';
 import { waitForTransaction } from './waitForTransaction';
 
 export async function getTransaction({
-  boc,
+  txHash,
   address,
   client,
 }: {
-  boc: string;
+  txHash: string;
   client: TonClient;
   address: string;
 }) {
-  const cell = Cell.fromBase64(boc);
-  const buffer = cell.hash();
-  const txHash = buffer.toString('hex');
+  const transaction = await waitForTransaction({
+    client,
+    hash: txHash,
+    address,
+  });
 
-  const transaction = await waitForTransaction(
-    { hash: txHash, address },
-    client
-  );
+  console.log(transaction.outMessages, 'transaction.outMessages');
 
   return transaction;
 }

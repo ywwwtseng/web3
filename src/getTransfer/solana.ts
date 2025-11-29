@@ -1,27 +1,29 @@
 import { Connection } from '@solana/web3.js';
-import {
-  type ParsedTransactionWithMeta,
-  type TokenBalance,
-} from '@solana/web3.js';
+import { type TokenBalance } from '@solana/web3.js';
+import * as utils from '../utils';
 import type { Transfer } from '../types';
 
 export async function getTransfers({
   connection,
-  transaction,
+  hash,
 }: {
   connection: Connection;
-  transaction: string | ParsedTransactionWithMeta;
+  hash: string;
 }): Promise<Transfer[]> {
-  if (typeof transaction === 'string') {
-    transaction = await connection.getParsedTransaction(transaction, {
-      maxSupportedTransactionVersion: 0,
-      commitment: 'finalized',
-    });
+  const parsedTransaction = await utils.solana.waitForTransaction({
+    connection,
+    signature: hash,
+    refetchLimit: 10,
+    refetchInterval: 5000,
+  });
+
+  if (!parsedTransaction) {
+    throw new Error('SOLANA transaction not found');
   }
 
   const transfers: Transfer[] = [];
 
-  const mint = transaction.meta?.preTokenBalances?.[0]?.mint;
+  const mint = parsedTransaction.meta?.preTokenBalances?.[0]?.mint;
 
   if (mint) {
     const preMap = new Map<string, TokenBalance>();
@@ -29,12 +31,12 @@ export async function getTransfers({
     const senders: { mint: string; owner: string; delta: number }[] = [];
     const receivers: { mint: string; owner: string; delta: number }[] = [];
 
-    transaction.meta?.preTokenBalances?.forEach((b) => {
+    parsedTransaction.meta?.preTokenBalances?.forEach((b) => {
       if (b.owner) {
         preMap.set(`${b.mint}_${b.owner}`, b);
       }
     });
-    transaction.meta?.postTokenBalances?.forEach((b) => {
+    parsedTransaction.meta?.postTokenBalances?.forEach((b) => {
       if (b.owner) {
         postMap.set(`${b.mint}_${b.owner}`, b);
       }
@@ -71,10 +73,11 @@ export async function getTransfers({
         source: sender.owner,
         destination: receiver.owner,
         amount: receiver.delta.toString(),
+        transaction: parsedTransaction,
       });
     });
   } else {
-    for (const ix of transaction.transaction.message.instructions) {
+    for (const ix of parsedTransaction.transaction.message.instructions) {
       // 只處理類型為 'transfer'
       if ('parsed' in ix) {
         const parsed = ix.parsed as {
@@ -98,6 +101,7 @@ export async function getTransfers({
               source,
               destination,
               amount: lamports.toString(),
+              transaction: parsedTransaction,
             });
           } else {
             found.amount += lamports;

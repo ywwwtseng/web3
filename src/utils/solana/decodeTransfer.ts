@@ -12,12 +12,16 @@ import {
   decodeTransferCheckedInstruction,
 } from '@solana/spl-token';
 import { getAccountInfo } from './getAccountInfo';
-import type { Transfer } from '../../types';
 
 export async function decodeTransfer(
   connection: Connection,
   base64: string
-): Promise<Transfer> {
+): Promise<{
+  source: string;
+  destination: string;
+  amount: string;
+  tokenAddress?: string;
+}> {
   const tx = Transaction.from(Buffer.from(base64, 'base64'));
 
   if (tx.instructions.length === 1) {

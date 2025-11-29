@@ -1,8 +1,9 @@
 import { test, expect, describe } from 'bun:test';
 import { Connection } from '@solana/web3.js';
 import { JsonRpcProvider } from 'ethers';
-import { RPC_URL } from '../constants';
-import { NETWORKS } from '../constants';
+import { TonClient, Address } from '@ton/ton';
+import { RPC_URL, NETWORKS } from '../constants';
+import { getTxHash } from '../utils/ton/getTxHash';
 import { getTransfer } from '.';
 
 describe('getTransfer', () => {
@@ -30,9 +31,9 @@ describe('getTransfer', () => {
       '5g1QJWjSKuP2Pd2hbRffiSKPt7qgNvHgSN3m7nzRNbBM'
     );
     expect(transfer.amount).toBe('200000');
-  });
+  }, 10000);
 
-  test('get EVM Transfer with params', async () => {
+  test('get EVM Transfer', async () => {
     const provider = new JsonRpcProvider(RPC_URL.BSC);
     const transfer = await getTransfer({
       network: NETWORKS.BSC,
@@ -47,5 +48,37 @@ describe('getTransfer', () => {
       '0x723324C6EB42a8D417d43699D93Ad0Df6DE2479B'
     );
     expect(transfer.amount).toBe('1000000000000');
+  }, 10000);
+
+  test('get TON Transfer', async () => {
+    const client = new TonClient({
+      endpoint: 'https://toncenter.com/api/v2/jsonRPC',
+      apiKey: process.env.TONCENTER_API_KEY,
+    });
+    const transfer = await getTransfer({
+      network: NETWORKS.TON,
+      client,
+      source: 'UQAx1Kbv0kxStulX5v3k4r62E5Bi3a1vzkUz5ZIIkQYINAv7',
+      destination: 'UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO',
+    })(
+      getTxHash(
+        'te6cckEBBAEAtwAB5YgAY6lN36SYpW3Sr837ycV9bCcgxbta35yKZ8skESIMEGgDm0s7c///+ItJU6gQAAABHMo904iLEVc9gZGBX7SwY+t62CXgbpUCsT32rqEqkYbKNPxawtOIEFJhyNJym68DdqLyolpmE31kRm2uegnFKAkBAgoOw8htAwIDAAAAaEIASBQKww91mpe54qVTU/7RG5n/DzrqZ1VT6XoB7/FfVcMgL68IAAAAAAAAAAAAAAAAAACWoVBb'
+      )
+    );
+
+    expect(transfer).toBeDefined();
+    expect(
+      Address.parse(transfer.source).toString({
+        urlSafe: true,
+        bounceable: false,
+      })
+    ).toBe('UQAx1Kbv0kxStulX5v3k4r62E5Bi3a1vzkUz5ZIIkQYINAv7');
+    expect(
+      Address.parse(transfer.destination).toString({
+        urlSafe: true,
+        bounceable: false,
+      })
+    ).toBe('UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO');
+    expect(transfer.amount).toBe('100000000');
   });
 });

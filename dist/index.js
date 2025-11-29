@@ -7,6 +7,7 @@ var __export = (target, all) => {
 // src/index.ts
 import * as solana from "@solana/web3.js";
 import * as ethers from "ethers";
+import * as ton from "@ton/ton";
 
 // src/utils/index.ts
 var utils_exports = {};
@@ -115,7 +116,8 @@ __export(solana_exports, {
   getAccountInfo: () => getAccountInfo,
   getParsedTransaction: () => getParsedTransaction,
   getSignaturesForAddress: () => getSignaturesForAddress,
-  hasATA: () => hasATA
+  hasATA: () => hasATA,
+  waitForTransaction: () => waitForTransaction
 });
 
 // src/utils/solana/KeyPair.ts
@@ -464,12 +466,43 @@ async function getParsedTransaction({
   });
 }
 
+// src/utils/solana/waitForTransaction.ts
+async function waitForTransaction({
+  connection,
+  signature,
+  refetchInterval = 1e3,
+  refetchLimit
+}) {
+  return new Promise((resolve) => {
+    let refetches = 0;
+    const interval = setInterval(async () => {
+      refetches += 1;
+      try {
+        const transaction = await connection.getParsedTransaction(signature, {
+          maxSupportedTransactionVersion: 0,
+          commitment: "finalized"
+        });
+        if (transaction) {
+          clearInterval(interval);
+          resolve(transaction);
+          return;
+        }
+      } catch (error) {
+      }
+      if (refetchLimit && refetches >= refetchLimit) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, refetchInterval);
+  });
+}
+
 // src/utils/ton/index.ts
 var ton_exports = {};
 __export(ton_exports, {
   getJettonWalletAddress: () => getJettonWalletAddress,
   getTransaction: () => getTransaction,
-  waitForTransaction: () => waitForTransaction
+  waitForTransaction: () => waitForTransaction2
 });
 
 // src/utils/ton/getJettonWalletAddress.ts
@@ -499,14 +532,18 @@ import {
   beginCell,
   storeMessage
 } from "@ton/ton";
-var waitForTransaction = async (options, client) => {
-  const { hash, refetchInterval = 1e3, refetchLimit, address } = options;
+async function waitForTransaction2({
+  client,
+  hash,
+  refetchInterval = 1e3,
+  refetchLimit,
+  address
+}) {
   return new Promise((resolve) => {
     let refetches = 0;
     const walletAddress = Address.parse(address);
     const interval = setInterval(async () => {
       refetches += 1;
-      console.log("waiting transaction...");
       const state = await client.getContractState(walletAddress);
       if (!state || !state.lastTransaction) {
         clearInterval(interval);
@@ -522,8 +559,7 @@ var waitForTransaction = async (options, client) => {
       );
       if (lastTx && lastTx.inMessage) {
         const msgCell = beginCell().store(storeMessage(lastTx.inMessage)).endCell();
-        const inMsgHash = msgCell.hash().toString("base64");
-        console.log("InMsgHash", inMsgHash);
+        const inMsgHash = msgCell.hash().toString("hex");
         if (inMsgHash === hash) {
           clearInterval(interval);
           resolve(lastTx);
@@ -535,29 +571,28 @@ var waitForTransaction = async (options, client) => {
       }
     }, refetchInterval);
   });
-};
+}
 
 // src/utils/ton/getTransaction.ts
-import { Cell } from "@ton/ton";
 async function getTransaction({
-  boc,
+  txHash,
   address,
   client
 }) {
-  const cell = Cell.fromBase64(boc);
-  const buffer = cell.hash();
-  const txHash = buffer.toString("hex");
-  const transaction = await waitForTransaction(
-    { hash: txHash, address },
-    client
-  );
+  const transaction = await waitForTransaction2({
+    client,
+    hash: txHash,
+    address
+  });
+  console.log(transaction.outMessages, "transaction.outMessages");
   return transaction;
 }
 
 // src/utils/evm/index.ts
 var evm_exports = {};
 __export(evm_exports, {
-  estimateFee: () => estimateFee
+  estimateFee: () => estimateFee,
+  waitForTransaction: () => waitForTransaction3
 });
 
 // src/utils/evm/estimateFee.ts
@@ -602,6 +637,34 @@ async function estimateFee({
     );
     return (feeData.gasPrice * gasLimit).toString();
   }
+}
+
+// src/utils/evm/waitForTransaction.ts
+async function waitForTransaction3({
+  provider,
+  hash,
+  refetchInterval = 1e3,
+  refetchLimit
+}) {
+  return new Promise((resolve) => {
+    let refetches = 0;
+    const interval = setInterval(async () => {
+      refetches += 1;
+      try {
+        const receipt = await provider.getTransactionReceipt(hash);
+        if (receipt) {
+          clearInterval(interval);
+          resolve(receipt);
+          return;
+        }
+      } catch (error) {
+      }
+      if (refetchLimit && refetches >= refetchLimit) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, refetchInterval);
+  });
 }
 
 // src/KeyVaultService/index.ts
@@ -1144,17 +1207,24 @@ function getBlockTime3({
   };
 }
 
+// src/getTransfer/index.ts
+import { Address as Address2 } from "@ton/ton";
+
 // src/getTransfer/evm.ts
-import {
-  Interface
-} from "ethers";
+import { Interface } from "ethers";
 var transferIface = new Interface(ERC20_ABI);
 async function getTransfer({
   provider,
-  receipt
+  hash
 }) {
-  if (typeof receipt === "string") {
-    receipt = await provider.getTransactionReceipt(receipt);
+  const receipt = await evm_exports.waitForTransaction({
+    provider,
+    hash,
+    refetchLimit: 10,
+    refetchInterval: 5e3
+  });
+  if (!receipt) {
+    throw new Error("EVM transaction not found");
   }
   if (receipt.status !== 1) {
     return null;
@@ -1164,7 +1234,8 @@ async function getTransfer({
     return {
       source: transaction.from,
       destination: transaction.to,
-      amount: transaction.value.toString()
+      amount: transaction.value.toString(),
+      transaction: receipt
     };
   }
   for (const log of receipt.logs) {
@@ -1177,7 +1248,8 @@ async function getTransfer({
           source: parsed.args.from,
           destination: parsed.args.to,
           amount: rawAmount.toString(),
-          tokenAddress
+          tokenAddress,
+          transaction: receipt
         };
       }
     } catch (err) {
@@ -1189,27 +1261,30 @@ async function getTransfer({
 // src/getTransfer/solana.ts
 async function getTransfers({
   connection,
-  transaction
+  hash
 }) {
-  if (typeof transaction === "string") {
-    transaction = await connection.getParsedTransaction(transaction, {
-      maxSupportedTransactionVersion: 0,
-      commitment: "finalized"
-    });
+  const parsedTransaction = await solana_exports.waitForTransaction({
+    connection,
+    signature: hash,
+    refetchLimit: 10,
+    refetchInterval: 5e3
+  });
+  if (!parsedTransaction) {
+    throw new Error("SOLANA transaction not found");
   }
   const transfers = [];
-  const mint = transaction.meta?.preTokenBalances?.[0]?.mint;
+  const mint = parsedTransaction.meta?.preTokenBalances?.[0]?.mint;
   if (mint) {
     const preMap = /* @__PURE__ */ new Map();
     const postMap = /* @__PURE__ */ new Map();
     const senders = [];
     const receivers = [];
-    transaction.meta?.preTokenBalances?.forEach((b) => {
+    parsedTransaction.meta?.preTokenBalances?.forEach((b) => {
       if (b.owner) {
         preMap.set(`${b.mint}_${b.owner}`, b);
       }
     });
-    transaction.meta?.postTokenBalances?.forEach((b) => {
+    parsedTransaction.meta?.postTokenBalances?.forEach((b) => {
       if (b.owner) {
         postMap.set(`${b.mint}_${b.owner}`, b);
       }
@@ -1240,11 +1315,12 @@ async function getTransfers({
         tokenAddress: receiver.mint,
         source: sender.owner,
         destination: receiver.owner,
-        amount: receiver.delta.toString()
+        amount: receiver.delta.toString(),
+        transaction: parsedTransaction
       });
     });
   } else {
-    for (const ix of transaction.transaction.message.instructions) {
+    for (const ix of parsedTransaction.transaction.message.instructions) {
       if ("parsed" in ix) {
         const parsed = ix.parsed;
         if (parsed.type === "transfer") {
@@ -1259,7 +1335,8 @@ async function getTransfers({
             transfers.push({
               source,
               destination,
-              amount: lamports.toString()
+              amount: lamports.toString(),
+              transaction: parsedTransaction
             });
           } else {
             found.amount += lamports;
@@ -1271,22 +1348,58 @@ async function getTransfers({
   return transfers;
 }
 
+// src/getTransfer/ton.ts
+async function getTransfer2({
+  client,
+  source,
+  hash
+}) {
+  const transaction = await ton_exports.waitForTransaction({
+    client,
+    hash,
+    address: source,
+    refetchLimit: 10,
+    refetchInterval: 3e3
+  });
+  if (!transaction) {
+    throw new Error("TON transaction not found");
+  }
+  const outMessages = Array.from(transaction.outMessages.values());
+  for (const msg of outMessages) {
+    const info = msg?.info;
+    if (info?.type !== "internal") continue;
+    const coins = info.value?.coins;
+    if (!coins || coins <= 0n) continue;
+    const source2 = info.src?.toString();
+    const destination = info.dest?.toString();
+    if (!source2 || !destination) continue;
+    return {
+      source: source2,
+      destination,
+      amount: coins.toString(),
+      transaction
+    };
+  }
+  return null;
+}
+
 // src/getTransfer/index.ts
-function getTransfer2({
+function getTransfer3({
   network,
   provider,
   connection,
+  client,
   source,
   destination
 }) {
-  return async (txData) => {
+  return async (hash) => {
     if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
       if (!provider) {
         throw new Error("Provider is required for EVM");
       }
       const transfer = await getTransfer({
         provider,
-        receipt: txData
+        hash
       });
       if (transfer && transfer.source === source && transfer.destination === destination) {
         return transfer;
@@ -1296,11 +1409,32 @@ function getTransfer2({
     } else if (network === NETWORKS.SOLANA) {
       const transfers = await getTransfers({
         connection,
-        transaction: txData
+        hash
       });
       return transfers.find(
         (transfer) => transfer.source === source && transfer.destination === destination
       ) ?? null;
+    } else if (network === NETWORKS.TON) {
+      if (!client) {
+        throw new Error("Client is required for TON");
+      }
+      const transfer = await getTransfer2({
+        client,
+        source,
+        hash
+      });
+      if (!transfer) {
+        return null;
+      }
+      const sourceAddress = Address2.parse(source);
+      const destinationAddress = Address2.parse(destination);
+      const transferSourceAddress = Address2.parse(transfer.source);
+      const transferDestinationAddress = Address2.parse(transfer.destination);
+      if (sourceAddress.equals(transferSourceAddress) && destinationAddress.equals(transferDestinationAddress)) {
+        return transfer;
+      } else {
+        return null;
+      }
     }
     throw new Error(`Network ${network} not supported`);
   };
@@ -1317,7 +1451,8 @@ export {
   getBlockTime3 as getBlockTime,
   getGasFee3 as getGasFee,
   getTokenInfo6 as getTokenInfo,
-  getTransfer2 as getTransfer,
+  getTransfer3 as getTransfer,
   solana,
+  ton,
   utils_exports as utils
 };

@@ -1,5 +1,6 @@
 export * as solana from '@solana/web3.js';
 export * as ethers from 'ethers';
+export * as ton from '@ton/ton';
 export * as utils from './utils';
 export * from './KeyVaultService';
 export * from './getBalance';

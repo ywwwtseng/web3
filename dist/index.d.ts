@@ -4,8 +4,10 @@ export { _solana_web3_js as solana };
 import { JsonRpcProvider, Wallet, TransactionReceipt } from 'ethers';
 import * as ethers from 'ethers';
 export { ethers };
-import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { TonClient, Transaction as Transaction$1 } from '@ton/ton';
+import * as ton from '@ton/ton';
+export { ton };
+import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import * as _ton_core from '@ton/core';
 import TonWeb from 'tonweb';
 
@@ -52,14 +54,12 @@ interface CreateTransactionParams {
 }
 declare function createTransaction(connection: Connection, { feePayer, source, destination, amount, mint, tokenProgram, }: CreateTransactionParams): Promise<Transaction>;
 
-type Transfer = {
+declare function decodeTransfer(connection: Connection, base64: string): Promise<{
     source: string;
     destination: string;
     amount: string;
     tokenAddress?: string;
-};
-
-declare function decodeTransfer(connection: Connection, base64: string): Promise<Transfer>;
+}>;
 
 declare function getAccountInfo(connection: Connection, publicKey: string | PublicKey): Promise<{
     owner: string | undefined;
@@ -70,6 +70,13 @@ declare function getParsedTransaction({ connection, signature, }: {
     connection: Connection;
     signature: string;
 }): Promise<_solana_web3_js.ParsedTransactionWithMeta>;
+
+declare function waitForTransaction$2({ connection, signature, refetchInterval, refetchLimit, }: {
+    connection: Connection;
+    signature: string;
+    refetchInterval?: number;
+    refetchLimit?: number;
+}): Promise<ParsedTransactionWithMeta | null>;
 
 type index$3_CreateTransactionParams = CreateTransactionParams;
 type index$3_KeyPair = KeyPair;
@@ -84,29 +91,29 @@ declare const index$3_getParsedTransaction: typeof getParsedTransaction;
 declare const index$3_getSignaturesForAddress: typeof getSignaturesForAddress;
 declare const index$3_hasATA: typeof hasATA;
 declare namespace index$3 {
-  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_hasATA as hasATA };
+  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_hasATA as hasATA, waitForTransaction$2 as waitForTransaction };
 }
 
 declare function getJettonWalletAddress(minterAddress: string, ownerAddress: string): Promise<string>;
 
-declare const waitForTransaction: (options: {
+declare function waitForTransaction$1({ client, hash, refetchInterval, refetchLimit, address, }: {
+    client: TonClient;
     hash: string;
     refetchInterval?: number;
     refetchLimit?: number;
     address: string;
-}, client: TonClient) => Promise<Transaction$1 | null>;
+}): Promise<Transaction$1 | null>;
 
-declare function getTransaction({ boc, address, client, }: {
-    boc: string;
+declare function getTransaction({ txHash, address, client, }: {
+    txHash: string;
     client: TonClient;
     address: string;
 }): Promise<_ton_core.Transaction>;
 
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
 declare const index$2_getTransaction: typeof getTransaction;
-declare const index$2_waitForTransaction: typeof waitForTransaction;
 declare namespace index$2 {
-  export { index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_waitForTransaction as waitForTransaction };
+  export { index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {
@@ -117,9 +124,17 @@ declare function estimateFee({ provider, tokenAddress, signer, destination, amou
     amount?: string | bigint;
 }): Promise<string>;
 
+declare function waitForTransaction({ provider, hash, refetchInterval, refetchLimit, }: {
+    provider: JsonRpcProvider;
+    hash: string;
+    refetchInterval?: number;
+    refetchLimit?: number;
+}): Promise<TransactionReceipt | null>;
+
 declare const index$1_estimateFee: typeof estimateFee;
+declare const index$1_waitForTransaction: typeof waitForTransaction;
 declare namespace index$1 {
-  export { index$1_estimateFee as estimateFee };
+  export { index$1_estimateFee as estimateFee, index$1_waitForTransaction as waitForTransaction };
 }
 
 declare const index_formatUnits: typeof formatUnits;
@@ -233,13 +248,22 @@ declare function getBlockTime({ network, provider, }: {
     provider?: JsonRpcProvider;
 }): (txData: TransactionReceipt | ParsedTransactionWithMeta) => Promise<number>;
 
-declare function getTransfer({ network, provider, connection, source, destination, }: {
+declare function getTransfer({ network, provider, connection, client, source, destination, }: {
     network: string;
     provider?: JsonRpcProvider;
     connection?: Connection;
+    client?: TonClient;
     source: string;
     destination: string;
-}): (txData: string | TransactionReceipt | ParsedTransactionWithMeta) => Promise<Transfer>;
+}): (hash: string) => Promise<Transfer>;
+
+type Transfer = {
+    source: string;
+    destination: string;
+    amount: string;
+    tokenAddress?: string;
+    transaction: ParsedTransactionWithMeta | TransactionReceipt | Transaction$1;
+};
 
 declare const ERC20_ABI: string[];
 

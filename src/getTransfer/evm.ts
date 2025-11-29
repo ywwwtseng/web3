@@ -1,9 +1,5 @@
-import {
-  TransactionReceipt,
-  TransactionResponse,
-  JsonRpcProvider,
-  Interface,
-} from 'ethers';
+import { JsonRpcProvider, Interface } from 'ethers';
+import * as utils from '../utils';
 import type { Transfer } from '../types';
 import { ERC20_ABI } from '../abi/ERC20_ABI';
 
@@ -11,13 +7,20 @@ const transferIface = new Interface(ERC20_ABI);
 
 export async function getTransfer({
   provider,
-  receipt,
+  hash,
 }: {
   provider: JsonRpcProvider;
-  receipt: string | TransactionReceipt;
+  hash: string;
 }): Promise<Transfer | null> {
-  if (typeof receipt === 'string') {
-    receipt = await provider.getTransactionReceipt(receipt);
+  const receipt = await utils.evm.waitForTransaction({
+    provider,
+    hash,
+    refetchLimit: 10,
+    refetchInterval: 5000,
+  });
+
+  if (!receipt) {
+    throw new Error('EVM transaction not found');
   }
 
   if (receipt.status !== 1) {
@@ -35,6 +38,7 @@ export async function getTransfer({
       source: transaction.from,
       destination: transaction.to,
       amount: transaction.value.toString(),
+      transaction: receipt,
     };
   }
 
@@ -50,6 +54,7 @@ export async function getTransfer({
           destination: parsed.args.to,
           amount: rawAmount.toString(),
           tokenAddress,
+          transaction: receipt,
         };
       }
     } catch (err) {
