@@ -16,7 +16,7 @@ describe('getGasFee', () => {
       }
     );
 
-    const gasFee = await getGasFee({ network: NETWORKS.SOLANA })(transaction);
+    const gasFee = getGasFee({ network: NETWORKS.SOLANA, transaction });
     expect(BigInt(gasFee)).toBeGreaterThan(0n);
   });
 
@@ -25,7 +25,10 @@ describe('getGasFee', () => {
     const receipt = await provider.getTransactionReceipt(
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa'
     );
-    const gasFee = await getGasFee({ network: NETWORKS.BSC })(receipt);
+    const gasFee = getGasFee({
+      network: NETWORKS.BSC,
+      transaction: receipt,
+    });
     expect(BigInt(gasFee)).toBeGreaterThan(0n);
   });
 });

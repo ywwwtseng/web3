@@ -18,20 +18,22 @@ describe('Transaction', () => {
 
     const blockTime = await getBlockTime({
       network: NETWORKS.SOLANA,
-    })(transaction);
+      transaction,
+    });
 
     expect(blockTime).toBeGreaterThan(0);
   });
 
   test('get EVM Transaction Block Time', async () => {
     const provider = new JsonRpcProvider(RPC_URL.BSC);
-    const receipt = await provider.getTransactionReceipt(
+    const transaction = await provider.getTransactionReceipt(
       '0xc5bfb0ac331e117206d7a523e0e2915601f18761d6717f5e0a451bad406d12aa'
     );
     const blockTime = await getBlockTime({
       network: NETWORKS.BSC,
       provider,
-    })(receipt);
+      transaction,
+    });
     expect(blockTime).toBeGreaterThan(0);
   });
 });

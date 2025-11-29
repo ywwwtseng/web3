@@ -502,6 +502,7 @@ var ton_exports = {};
 __export(ton_exports, {
   getJettonWalletAddress: () => getJettonWalletAddress,
   getTransaction: () => getTransaction,
+  getTxHash: () => getTxHash,
   waitForTransaction: () => waitForTransaction2
 });
 
@@ -586,6 +587,15 @@ async function getTransaction({
   });
   console.log(transaction.outMessages, "transaction.outMessages");
   return transaction;
+}
+
+// src/utils/ton/getTxHash.ts
+import { Cell } from "@ton/ton";
+function getTxHash(boc) {
+  const cell = Cell.fromBase64(boc);
+  const buffer = cell.hash();
+  const txHash = buffer.toString("hex");
+  return txHash;
 }
 
 // src/utils/evm/index.ts
@@ -1157,20 +1167,40 @@ function getGasFee2(receipt) {
   return (receipt.gasUsed * receipt.gasPrice).toString();
 }
 
-// src/getGasFee/index.ts
-function getGasFee3({
-  network
-}) {
-  return async (txData) => {
-    if (network === NETWORKS.SOLANA) {
-      return getGasFee(txData);
-    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
-      if (!txData) {
-        throw new Error("Receipt is required for EVM");
-      }
-      return getGasFee2(txData);
+// src/getGasFee/ton.ts
+function getGasFee3(transaction) {
+  let gasFee = 0n;
+  let forwardFee = 0n;
+  if (transaction.description.type === "generic") {
+    const compute = transaction.description.computePhase;
+    if (compute && compute.type === "vm") {
+      gasFee = BigInt(compute.gasUsed ?? 0);
     }
-  };
+    const action = transaction.description.actionPhase;
+    if (action) {
+      forwardFee = BigInt(action.totalFwdFees ?? 0);
+    }
+  }
+  const totalFee = gasFee + forwardFee;
+  return totalFee.toString();
+}
+
+// src/getGasFee/index.ts
+function getGasFee4({
+  network,
+  transaction
+}) {
+  if (!transaction) {
+    throw new Error("Receipt is required for EVM");
+  }
+  if (network === NETWORKS.SOLANA) {
+    return getGasFee(transaction);
+  } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
+    return getGasFee2(transaction);
+  } else if (network === NETWORKS.TON) {
+    return getGasFee3(transaction);
+  }
+  throw new Error(`Network ${network} not supported`);
 }
 
 // src/getBlockTime/solana.ts
@@ -1187,24 +1217,31 @@ async function getBlockTime2({
   return block.timestamp;
 }
 
+// src/getBlockTime/ton.ts
+function getBlockTime3(transaction) {
+  return transaction.now;
+}
+
 // src/getBlockTime/index.ts
-function getBlockTime3({
+async function getBlockTime4({
   network,
-  provider
+  provider,
+  transaction
 }) {
-  return async (txData) => {
-    if (network === NETWORKS.SOLANA) {
-      return getBlockTime(txData);
-    } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
-      if (!provider) {
-        throw new Error("Provider is required for EVM");
-      }
-      return await getBlockTime2({
-        provider,
-        receipt: txData
-      });
+  if (network === NETWORKS.SOLANA) {
+    return getBlockTime(transaction);
+  } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
+    if (!provider) {
+      throw new Error("Provider is required for EVM");
     }
-  };
+    return await getBlockTime2({
+      provider,
+      receipt: transaction
+    });
+  } else if (network === NETWORKS.TON) {
+    return getBlockTime3(transaction);
+  }
+  throw new Error(`Network ${network} not supported`);
 }
 
 // src/getTransfer/index.ts
@@ -1448,8 +1485,8 @@ export {
   RPC_URL,
   ethers,
   getBalance4 as getBalance,
-  getBlockTime3 as getBlockTime,
-  getGasFee3 as getGasFee,
+  getBlockTime4 as getBlockTime,
+  getGasFee4 as getGasFee,
   getTokenInfo6 as getTokenInfo,
   getTransfer3 as getTransfer,
   solana,

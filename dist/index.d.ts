@@ -110,10 +110,13 @@ declare function getTransaction({ txHash, address, client, }: {
     address: string;
 }): Promise<_ton_core.Transaction>;
 
+declare function getTxHash(boc: string): string;
+
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
 declare const index$2_getTransaction: typeof getTransaction;
+declare const index$2_getTxHash: typeof getTxHash;
 declare namespace index$2 {
-  export { index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, waitForTransaction$1 as waitForTransaction };
+  export { index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_getTxHash as getTxHash, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {
@@ -239,14 +242,16 @@ declare const NATIVE_TOKEN_POOL_PAIRS: {
     BTC: string;
 };
 
-declare function getGasFee({ network, }: {
+declare function getGasFee({ network, transaction, }: {
     network: (typeof NETWORKS)[keyof typeof NETWORKS];
-}): (txData: string | TransactionReceipt | ParsedTransactionWithMeta) => Promise<string>;
+    transaction: ParsedTransactionWithMeta | TransactionReceipt | Transaction$1;
+}): string;
 
-declare function getBlockTime({ network, provider, }: {
+declare function getBlockTime({ network, provider, transaction, }: {
     network: (typeof NETWORKS)[keyof typeof NETWORKS];
     provider?: JsonRpcProvider;
-}): (txData: TransactionReceipt | ParsedTransactionWithMeta) => Promise<number>;
+    transaction: TransactionReceipt | ParsedTransactionWithMeta | Transaction$1;
+}): Promise<number>;
 
 declare function getTransfer({ network, provider, connection, client, source, destination, }: {
     network: string;
