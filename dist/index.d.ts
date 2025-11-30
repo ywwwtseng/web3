@@ -112,11 +112,17 @@ declare function getTransaction({ txHash, address, client, }: {
 
 declare function getTxHash(boc: string): string;
 
+declare function createTransferBody({ tokenAmount, toAddress, }: {
+    tokenAmount: string;
+    toAddress: string;
+}): string;
+
+declare const index$2_createTransferBody: typeof createTransferBody;
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
 declare const index$2_getTransaction: typeof getTransaction;
 declare const index$2_getTxHash: typeof getTxHash;
 declare namespace index$2 {
-  export { index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_getTxHash as getTxHash, waitForTransaction$1 as waitForTransaction };
+  export { index$2_createTransferBody as createTransferBody, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_getTxHash as getTxHash, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {

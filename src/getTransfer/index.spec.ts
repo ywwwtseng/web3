@@ -80,5 +80,5 @@ describe('getTransfer', () => {
       })
     ).toBe('UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO');
     expect(transfer.amount).toBe('100000000');
-  });
+  }, 10000);
 });

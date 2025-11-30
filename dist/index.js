@@ -500,6 +500,7 @@ async function waitForTransaction({
 // src/utils/ton/index.ts
 var ton_exports = {};
 __export(ton_exports, {
+  createTransferBody: () => createTransferBody,
   getJettonWalletAddress: () => getJettonWalletAddress,
   getTransaction: () => getTransaction,
   getTxHash: () => getTxHash,
@@ -598,6 +599,16 @@ function getTxHash(boc) {
   return txHash;
 }
 
+// src/utils/ton/createTransferBody.ts
+import TonWeb2 from "tonweb";
+import { beginCell as beginCell2, Address as Address2 } from "@ton/ton";
+function createTransferBody({
+  tokenAmount,
+  toAddress
+}) {
+  return beginCell2().storeUint(260734629, 32).storeUint(0, 64).storeCoins(new TonWeb2.utils.BN(tokenAmount)).storeAddress(Address2.parse(toAddress)).storeAddress(Address2.parse(toAddress)).storeMaybeRef(null).storeCoins(TonWeb2.utils.toNano("0")).storeMaybeRef(null).endCell().toBoc().toString("base64");
+}
+
 // src/utils/evm/index.ts
 var evm_exports = {};
 __export(evm_exports, {
@@ -681,7 +692,7 @@ async function waitForTransaction3({
 import { Wallet } from "ethers";
 import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
 import { WalletContractV5R1 } from "@ton/ton";
-import TonWeb2 from "tonweb";
+import TonWeb3 from "tonweb";
 
 // src/algorithm/AES256GCM.ts
 import crypto from "crypto";
@@ -776,7 +787,7 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        const keyPair = TonWeb2.utils.nacl.sign.keyPair.fromSecretKey(
+        const keyPair = TonWeb3.utils.nacl.sign.keyPair.fromSecretKey(
           Buffer.from(decryptedHex, "hex")
         );
         const publicKey = Buffer.from(keyPair.publicKey);
@@ -796,7 +807,7 @@ var KeyVaultService = class extends AES256GCM {
 
 // src/getBalance/index.ts
 import { JsonRpcProvider as JsonRpcProvider2 } from "ethers";
-import TonWeb4 from "tonweb";
+import TonWeb5 from "tonweb";
 
 // src/getBalance/solana.ts
 import { PublicKey as PublicKey4 } from "@solana/web3.js";
@@ -851,19 +862,19 @@ async function getBalance2(provider, {
 }
 
 // src/getBalance/ton.ts
-import TonWeb3 from "tonweb";
+import TonWeb4 from "tonweb";
 var getBalance3 = async ({
   provider,
   tokenAddress,
   address
 }) => {
-  const tonweb = new TonWeb3(provider ?? new TonWeb3.HttpProvider());
+  const tonweb = new TonWeb4(provider ?? new TonWeb4.HttpProvider());
   if (tokenAddress) {
     const jettonWalletAddress = await utils_exports.ton.getJettonWalletAddress(
       tokenAddress,
       address
     );
-    const jettonWallet = new TonWeb3.token.jetton.JettonWallet(tonweb.provider, {
+    const jettonWallet = new TonWeb4.token.jetton.JettonWallet(tonweb.provider, {
       address: jettonWalletAddress
     });
     const data = await jettonWallet.getData();
@@ -909,7 +920,7 @@ function getBalance4({
       if (!provider) {
         throw new Error("Provider is required for TON");
       }
-      if (!(provider instanceof TonWeb4.HttpProvider)) {
+      if (!(provider instanceof TonWeb5.HttpProvider)) {
         throw new Error("Provider must be an instance of HttpProvider");
       }
       return await getBalance3({
@@ -1245,7 +1256,7 @@ async function getBlockTime4({
 }
 
 // src/getTransfer/index.ts
-import { Address as Address2 } from "@ton/ton";
+import { Address as Address4 } from "@ton/ton";
 
 // src/getTransfer/evm.ts
 import { Interface } from "ethers";
@@ -1386,6 +1397,30 @@ async function getTransfers({
 }
 
 // src/getTransfer/ton.ts
+import { Address as Address3 } from "@ton/ton";
+var JETTON_TRANSFER_OP = 260734629;
+var JETTON_TRANSFER_NOTIFICATION_OP = 1935855772;
+async function getMinterAddressFromWallet(client, jettonWalletAddress) {
+  try {
+    const walletAddr = Address3.parse(jettonWalletAddress);
+    const state = await client.getContractState(walletAddr);
+    if (!state || !state.data) {
+      return null;
+    }
+    const data = state.data;
+    const cell = typeof data === "object" && "beginParse" in data ? data : null;
+    if (!cell) {
+      return null;
+    }
+    const slice = cell.beginParse();
+    slice.loadCoins();
+    slice.loadAddress();
+    const minterAddress = slice.loadAddress();
+    return minterAddress.toString();
+  } catch (error) {
+    return null;
+  }
+}
 async function getTransfer2({
   client,
   source,
@@ -1405,17 +1440,63 @@ async function getTransfer2({
   for (const msg of outMessages) {
     const info = msg?.info;
     if (info?.type !== "internal") continue;
+    const sourceAddress = info.src?.toString();
+    const destinationAddress = info.dest?.toString();
+    if (!sourceAddress || !destinationAddress) continue;
+    const body = msg?.body;
+    if (body && typeof body === "object" && "beginParse" in body) {
+      try {
+        const slice = body.beginParse();
+        if (slice.remainingBits >= 32) {
+          const opCode = slice.loadUint(32);
+          if (opCode === JETTON_TRANSFER_OP) {
+            if (slice.remainingBits >= 64) {
+              slice.loadUint(64);
+              const jettonAmount = slice.loadCoins();
+              const minterAddress = await getMinterAddressFromWallet(
+                client,
+                sourceAddress
+              );
+              return {
+                source: sourceAddress,
+                destination: destinationAddress,
+                amount: jettonAmount.toString(),
+                tokenAddress: minterAddress || void 0,
+                // Jetton minter address
+                transaction
+              };
+            }
+          } else if (opCode === JETTON_TRANSFER_NOTIFICATION_OP) {
+            if (slice.remainingBits >= 64) {
+              slice.loadUint(64);
+              const jettonAmount = slice.loadCoins();
+              const minterAddress = await getMinterAddressFromWallet(
+                client,
+                sourceAddress
+              );
+              return {
+                source: sourceAddress,
+                destination: destinationAddress,
+                amount: jettonAmount.toString(),
+                tokenAddress: minterAddress || void 0,
+                // Jetton minter address
+                transaction
+              };
+            }
+          }
+        }
+      } catch (error) {
+      }
+    }
     const coins = info.value?.coins;
-    if (!coins || coins <= 0n) continue;
-    const source2 = info.src?.toString();
-    const destination = info.dest?.toString();
-    if (!source2 || !destination) continue;
-    return {
-      source: source2,
-      destination,
-      amount: coins.toString(),
-      transaction
-    };
+    if (coins && coins > 0n) {
+      return {
+        source: sourceAddress,
+        destination: destinationAddress,
+        amount: coins.toString(),
+        transaction
+      };
+    }
   }
   return null;
 }
@@ -1463,10 +1544,10 @@ function getTransfer3({
       if (!transfer) {
         return null;
       }
-      const sourceAddress = Address2.parse(source);
-      const destinationAddress = Address2.parse(destination);
-      const transferSourceAddress = Address2.parse(transfer.source);
-      const transferDestinationAddress = Address2.parse(transfer.destination);
+      const sourceAddress = Address4.parse(source);
+      const destinationAddress = Address4.parse(destination);
+      const transferSourceAddress = Address4.parse(transfer.source);
+      const transferDestinationAddress = Address4.parse(transfer.destination);
       if (sourceAddress.equals(transferSourceAddress) && destinationAddress.equals(transferDestinationAddress)) {
         return transfer;
       } else {
