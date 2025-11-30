@@ -1,48 +1,8 @@
-import { TonClient, Address } from '@ton/ton';
+import { TonClient } from '@ton/ton';
+import TonWeb from 'tonweb';
 import * as utils from '../utils';
 import type { Transfer } from '../types';
-
-// Jetton transfer op codes
-const JETTON_TRANSFER_OP = 0x0f8a7ea5; // transfer
-const JETTON_TRANSFER_NOTIFICATION_OP = 0x7362d09c; // transfer_notification
-
-// 從 jetton wallet 合約狀態中獲取 minter address
-async function getMinterAddressFromWallet(
-  client: TonClient,
-  jettonWalletAddress: string
-): Promise<string | null> {
-  try {
-    const walletAddr = Address.parse(jettonWalletAddress);
-    const state = await client.getContractState(walletAddr);
-
-    if (!state || !state.data) {
-      return null;
-    }
-
-    // Jetton wallet 合約數據結構：
-    // balance:Coins owner:MsgAddress minter:MsgAddress wallet_code:^Cell
-    // state.data 可能是 Cell 或 Buffer，使用類型斷言處理
-    const data = state.data as any;
-    const cell = typeof data === 'object' && 'beginParse' in data ? data : null;
-
-    if (!cell) {
-      return null;
-    }
-
-    const slice = cell.beginParse();
-
-    // 跳過 balance (Coins)
-    slice.loadCoins();
-    // 跳過 owner (MsgAddress)
-    slice.loadAddress();
-    // 讀取 minter (MsgAddress)
-    const minterAddress = slice.loadAddress();
-
-    return minterAddress.toString();
-  } catch (error) {
-    return null;
-  }
-}
+import { JETTON_TRANSFER_OP } from '../constants';
 
 export async function getTransfer({
   client,
@@ -92,47 +52,34 @@ export async function getTransfer({
           // 檢查是否為 Jetton transfer
           if (opCode === JETTON_TRANSFER_OP) {
             // Jetton transfer 結構：
-            // op:uint32 query_id:uint64 amount:Coins destination:MsgAddress ...
+            // op:uint32 query_id:uint64 amount:Coins destination:MsgAddress response_destination:MsgAddress ...
             // 跳過 query_id (64 bits)
             if (slice.remainingBits >= 64) {
               slice.loadUint(64);
               // 讀取 amount (Coins)
               const jettonAmount = slice.loadCoins();
+              // 讀取 destination (接收者的用戶地址，不是 jetton wallet 地址)
+              const receiverAddress = slice.loadAddress();
 
-              // 從 jetton wallet 地址獲取 minter address
-              const minterAddress = await getMinterAddressFromWallet(
-                client,
-                sourceAddress
+              const jettonWallet = new TonWeb.token.jetton.JettonWallet(
+                new TonWeb.HttpProvider(),
+                {
+                  address: destinationAddress,
+                }
               );
 
-              return {
-                source: sourceAddress,
-                destination: destinationAddress,
-                amount: jettonAmount.toString(),
-                tokenAddress: minterAddress || undefined, // Jetton minter address
-                transaction,
-              };
-            }
-          } else if (opCode === JETTON_TRANSFER_NOTIFICATION_OP) {
-            // transfer_notification 結構：
-            // op:uint32 query_id:uint64 amount:Coins sender:MsgAddress ...
-            // 跳過 query_id (64 bits)
-            if (slice.remainingBits >= 64) {
-              slice.loadUint(64);
-              // 讀取 amount (Coins)
-              const jettonAmount = slice.loadCoins();
-
-              // 從 jetton wallet 地址獲取 minter address
-              const minterAddress = await getMinterAddressFromWallet(
-                client,
-                sourceAddress
-              );
+              const data = await jettonWallet.getData();
 
               return {
-                source: sourceAddress,
-                destination: destinationAddress,
+                source: sourceAddress, // 發送者的用戶地址
+                destination: receiverAddress.toString(), // 接收者的用戶地址
                 amount: jettonAmount.toString(),
-                tokenAddress: minterAddress || undefined, // Jetton minter address
+                tokenAddress: data.jettonMinterAddress.toString(
+                  true,
+                  true,
+                  true,
+                  false
+                ), // Jetton minter address
                 transaction,
               };
             }

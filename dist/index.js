@@ -86,6 +86,8 @@ var NATIVE_TOKEN_POOL_PAIRS = {
   TRON: "TRXUSDT",
   BTC: "BTCUSDT"
 };
+var JETTON_TRANSFER_OP = 260734629;
+var JETTON_TRANSFER_NOTIFICATION_OP = 1935855772;
 
 // src/utils/rpc.ts
 function getRpcUrl(network, options = {}) {
@@ -1074,6 +1076,7 @@ async function getTokenInfo3({ address }) {
 }
 
 // src/getTokenInfo/ton.ts
+import { Address as Address3 } from "@ton/ton";
 async function getTokenInfo4({ address }) {
   if (address === "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs") {
     const res = await fetch(`https://tonapi.io/v2/jettons/${address}`);
@@ -1088,7 +1091,10 @@ async function getTokenInfo4({ address }) {
       name: data.metadata.name,
       symbol: data.metadata.symbol,
       decimals: Number(data.metadata.decimals),
-      address,
+      address: Address3.parse(address).toString({
+        urlSafe: true,
+        bounceable: true
+      }),
       icon: data.metadata.image,
       icon_file: blob ? new File([blob], data.metadata.symbol.toLowerCase(), {
         type: blob.type
@@ -1111,7 +1117,12 @@ async function getTokenInfo4({ address }) {
       name: data.name,
       symbol: data.symbol,
       decimals: data.detail_platforms["the-open-network"].decimal_place,
-      address: data.detail_platforms["the-open-network"].contract_address,
+      address: Address3.parse(
+        data.detail_platforms["the-open-network"].contract_address
+      ).toString({
+        urlSafe: true,
+        bounceable: true
+      }),
       icon: data.image.small,
       icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
       tokenProgram: void 0,
@@ -1397,30 +1408,7 @@ async function getTransfers({
 }
 
 // src/getTransfer/ton.ts
-import { Address as Address3 } from "@ton/ton";
-var JETTON_TRANSFER_OP = 260734629;
-var JETTON_TRANSFER_NOTIFICATION_OP = 1935855772;
-async function getMinterAddressFromWallet(client, jettonWalletAddress) {
-  try {
-    const walletAddr = Address3.parse(jettonWalletAddress);
-    const state = await client.getContractState(walletAddr);
-    if (!state || !state.data) {
-      return null;
-    }
-    const data = state.data;
-    const cell = typeof data === "object" && "beginParse" in data ? data : null;
-    if (!cell) {
-      return null;
-    }
-    const slice = cell.beginParse();
-    slice.loadCoins();
-    slice.loadAddress();
-    const minterAddress = slice.loadAddress();
-    return minterAddress.toString();
-  } catch (error) {
-    return null;
-  }
-}
+import TonWeb6 from "tonweb";
 async function getTransfer2({
   client,
   source,
@@ -1453,32 +1441,26 @@ async function getTransfer2({
             if (slice.remainingBits >= 64) {
               slice.loadUint(64);
               const jettonAmount = slice.loadCoins();
-              const minterAddress = await getMinterAddressFromWallet(
-                client,
-                sourceAddress
+              const receiverAddress = slice.loadAddress();
+              const jettonWallet = new TonWeb6.token.jetton.JettonWallet(
+                new TonWeb6.HttpProvider(),
+                {
+                  address: destinationAddress
+                }
               );
+              const data = await jettonWallet.getData();
               return {
                 source: sourceAddress,
-                destination: destinationAddress,
+                // 發送者的用戶地址
+                destination: receiverAddress.toString(),
+                // 接收者的用戶地址
                 amount: jettonAmount.toString(),
-                tokenAddress: minterAddress || void 0,
-                // Jetton minter address
-                transaction
-              };
-            }
-          } else if (opCode === JETTON_TRANSFER_NOTIFICATION_OP) {
-            if (slice.remainingBits >= 64) {
-              slice.loadUint(64);
-              const jettonAmount = slice.loadCoins();
-              const minterAddress = await getMinterAddressFromWallet(
-                client,
-                sourceAddress
-              );
-              return {
-                source: sourceAddress,
-                destination: destinationAddress,
-                amount: jettonAmount.toString(),
-                tokenAddress: minterAddress || void 0,
+                tokenAddress: data.jettonMinterAddress.toString(
+                  true,
+                  true,
+                  true,
+                  false
+                ),
                 // Jetton minter address
                 transaction
               };
@@ -1560,6 +1542,8 @@ function getTransfer3({
 export {
   BLOCK_TIME_MS,
   ERC20_ABI,
+  JETTON_TRANSFER_NOTIFICATION_OP,
+  JETTON_TRANSFER_OP,
   KeyVaultService,
   NATIVE_TOKEN_POOL_PAIRS,
   NETWORKS,

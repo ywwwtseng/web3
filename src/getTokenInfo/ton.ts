@@ -1,3 +1,4 @@
+import { Address } from '@ton/ton';
 import { loadImage } from '../utils';
 
 export async function getTokenInfo({ address }: { address: string }) {
@@ -27,7 +28,10 @@ export async function getTokenInfo({ address }: { address: string }) {
       name: data.metadata.name,
       symbol: data.metadata.symbol,
       decimals: Number(data.metadata.decimals),
-      address: address,
+      address: Address.parse(address).toString({
+        urlSafe: true,
+        bounceable: true,
+      }),
       icon: data.metadata.image,
       icon_file: blob
         ? new File([blob], data.metadata.symbol.toLowerCase(), {
@@ -76,7 +80,12 @@ export async function getTokenInfo({ address }: { address: string }) {
       name: data.name,
       symbol: data.symbol,
       decimals: data.detail_platforms['the-open-network'].decimal_place,
-      address: data.detail_platforms['the-open-network'].contract_address,
+      address: Address.parse(
+        data.detail_platforms['the-open-network'].contract_address
+      ).toString({
+        urlSafe: true,
+        bounceable: true,
+      }),
       icon: data.image.small,
       icon_file: blob
         ? new File([blob], data.symbol.toLowerCase(), { type: blob.type })

@@ -247,6 +247,8 @@ declare const NATIVE_TOKEN_POOL_PAIRS: {
     TRON: string;
     BTC: string;
 };
+declare const JETTON_TRANSFER_OP = 260734629;
+declare const JETTON_TRANSFER_NOTIFICATION_OP = 1935855772;
 
 declare function getGasFee({ network, transaction, }: {
     network: (typeof NETWORKS)[keyof typeof NETWORKS];
@@ -278,4 +280,4 @@ type Transfer = {
 
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, index as utils };
+export { BLOCK_TIME_MS, ERC20_ABI, JETTON_TRANSFER_NOTIFICATION_OP, JETTON_TRANSFER_OP, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, index as utils };
