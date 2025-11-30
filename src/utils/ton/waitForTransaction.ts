@@ -43,6 +43,7 @@ export async function waitForTransaction({
           .store(storeMessage(lastTx.inMessage))
           .endCell();
         const inMsgHash = msgCell.hash().toString('hex');
+
         if (inMsgHash === hash) {
           clearInterval(interval);
           resolve(lastTx);

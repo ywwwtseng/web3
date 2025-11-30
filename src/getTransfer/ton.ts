@@ -2,7 +2,7 @@ import { TonClient } from '@ton/ton';
 import TonWeb from 'tonweb';
 import * as utils from '../utils';
 import type { Transfer } from '../types';
-import { JETTON_TRANSFER_OP } from '../constants';
+import { JETTON_TRANSFER_OP } from '../utils/ton/constants';
 
 export async function getTransfer({
   client,

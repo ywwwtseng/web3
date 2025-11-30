@@ -3,7 +3,6 @@ import { Connection } from '@solana/web3.js';
 import { JsonRpcProvider } from 'ethers';
 import { TonClient, Address } from '@ton/ton';
 import { RPC_URL, NETWORKS } from '../constants';
-import { getTxHash } from '../utils/ton/getTxHash';
 import { getTransfer } from '.';
 
 describe('getTransfer', () => {
@@ -58,9 +57,9 @@ describe('getTransfer', () => {
     const transfer = await getTransfer({
       network: NETWORKS.TON,
       client,
-      source: 'UQAx1Kbv0kxStulX5v3k4r62E5Bi3a1vzkUz5ZIIkQYINAv7',
-      destination: 'UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO',
-    })('0df0497d823bcbeb6e480904d738086d277a038ce393d7fab515600f85be5055');
+      source: 'UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO',
+      destination: 'UQAx1Kbv0kxStulX5v3k4r62E5Bi3a1vzkUz5ZIIkQYINAv7',
+    })('5d3c61293beef127b79bbd9f860c1c5092d9d285dc3dc365652bbabf8c43d2d6');
 
     expect(transfer).toBeDefined();
     expect(

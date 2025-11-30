@@ -86,8 +86,6 @@ var NATIVE_TOKEN_POOL_PAIRS = {
   TRON: "TRXUSDT",
   BTC: "BTCUSDT"
 };
-var JETTON_TRANSFER_OP = 260734629;
-var JETTON_TRANSFER_NOTIFICATION_OP = 1935855772;
 
 // src/utils/rpc.ts
 function getRpcUrl(network, options = {}) {
@@ -505,8 +503,8 @@ __export(ton_exports, {
   createTransferBody: () => createTransferBody,
   createWalletContractV5R1: () => createWalletContractV5R1,
   getJettonWalletAddress: () => getJettonWalletAddress,
-  getTransaction: () => getTransaction,
-  getTxHash: () => getTxHash,
+  getMessageHash: () => getMessageHash,
+  sendTransfer: () => sendTransfer,
   waitForTransaction: () => waitForTransaction2
 });
 
@@ -578,38 +576,28 @@ async function waitForTransaction2({
   });
 }
 
-// src/utils/ton/getTransaction.ts
-async function getTransaction({
-  txHash,
-  address,
-  client
-}) {
-  const transaction = await waitForTransaction2({
-    client,
-    hash: txHash,
-    address
-  });
-  console.log(transaction.outMessages, "transaction.outMessages");
-  return transaction;
-}
-
-// src/utils/ton/getTxHash.ts
+// src/utils/ton/getMessageHash.ts
 import { Cell } from "@ton/ton";
-function getTxHash(boc) {
+function getMessageHash(boc) {
   const cell = Cell.fromBase64(boc);
   const buffer = cell.hash();
-  const txHash = buffer.toString("hex");
-  return txHash;
+  return buffer.toString("hex");
 }
 
 // src/utils/ton/createTransferBody.ts
 import TonWeb2 from "tonweb";
 import { beginCell as beginCell2, Address as Address2 } from "@ton/ton";
+
+// src/utils/ton/constants.ts
+var JETTON_TRANSFER_OP = 260734629;
+
+// src/utils/ton/createTransferBody.ts
 function createTransferBody({
   tokenAmount,
-  toAddress
+  toAddress,
+  responseAddress
 }) {
-  return beginCell2().storeUint(260734629, 32).storeUint(0, 64).storeCoins(new TonWeb2.utils.BN(tokenAmount)).storeAddress(Address2.parse(toAddress)).storeAddress(Address2.parse(toAddress)).storeMaybeRef(null).storeCoins(TonWeb2.utils.toNano("0")).storeMaybeRef(null).endCell().toBoc().toString("base64");
+  return beginCell2().storeUint(JETTON_TRANSFER_OP, 32).storeUint(0, 64).storeCoins(BigInt(tokenAmount)).storeAddress(Address2.parse(toAddress)).storeAddress(Address2.parse(responseAddress)).storeMaybeRef(null).storeCoins(BigInt(TonWeb2.utils.toNano("0").toString())).storeMaybeRef(null).endCell();
 }
 
 // src/utils/ton/createWalletContractV5R1.ts
@@ -635,6 +623,108 @@ async function createWalletContractV5R1({
     state: account.state,
     contract
   };
+}
+
+// src/utils/ton/sendTransfer.ts
+import {
+  Address as Address3,
+  beginCell as beginCell4,
+  external,
+  internal,
+  SendMode,
+  storeMessage as storeMessage3
+} from "@ton/ton";
+import TonWeb4 from "tonweb";
+
+// src/utils/ton/getNormalizedExtMessageHash.ts
+import { beginCell as beginCell3, storeMessage as storeMessage2 } from "@ton/ton";
+function getNormalizedExtMessageHash(message) {
+  if (message.info.type !== "external-in") {
+    throw new Error(`Message must be "external-in", got ${message.info.type}`);
+  }
+  const info = {
+    ...message.info,
+    src: void 0,
+    importFee: 0n
+  };
+  const normalizedMessage = {
+    ...message,
+    init: null,
+    info
+  };
+  return beginCell3().store(storeMessage2(normalizedMessage, { forceRef: true })).endCell().hash();
+}
+
+// src/utils/ton/sendTransfer.ts
+async function sendTransfer({
+  client,
+  minterAddress,
+  privateKey,
+  destination,
+  amount
+}) {
+  const { contract, address } = await createWalletContractV5R1({
+    client,
+    privateKey
+  });
+  const seqno = await contract.getSeqno();
+  let externalMessage;
+  if (minterAddress) {
+    const senderJettonWalletAddress = await getJettonWalletAddress(
+      minterAddress,
+      address
+    );
+    const receiverJettonWalletAddress = await getJettonWalletAddress(
+      minterAddress,
+      destination
+    );
+    const transfer = contract.createTransfer({
+      seqno,
+      secretKey: Buffer.from(privateKey, "hex"),
+      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      messages: [
+        internal({
+          to: Address3.parse(senderJettonWalletAddress),
+          // 發送到發送者的 jetton wallet
+          value: BigInt(TonWeb4.utils.toNano("0.05").toString()),
+          // 用於支付 gas 和轉帳費用
+          body: createTransferBody({
+            tokenAmount: amount,
+            toAddress: receiverJettonWalletAddress,
+            responseAddress: address
+          })
+          // Cell 類型
+        })
+      ]
+    });
+    externalMessage = external({
+      to: Address3.parse(address),
+      // 發送者的錢包地址
+      init: null,
+      body: transfer
+    });
+  } else {
+    const transfer = contract.createTransfer({
+      seqno,
+      secretKey: Buffer.from(privateKey, "hex"),
+      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      messages: [
+        internal({
+          to: Address3.parse(destination),
+          value: BigInt(amount)
+        })
+      ]
+    });
+    externalMessage = external({
+      to: Address3.parse(address),
+      init: null,
+      body: transfer
+    });
+  }
+  const normalizedExtHash = getNormalizedExtMessageHash(externalMessage).toString("hex");
+  const externalMessageBoc = beginCell4().store(storeMessage3(externalMessage)).endCell().toBoc();
+  await client.sendFile(externalMessageBoc);
+  return normalizedExtHash;
 }
 
 // src/utils/evm/index.ts
@@ -720,7 +810,7 @@ async function waitForTransaction3({
 import { Wallet } from "ethers";
 import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
 import { WalletContractV5R1 as WalletContractV5R12 } from "@ton/ton";
-import TonWeb4 from "tonweb";
+import TonWeb5 from "tonweb";
 
 // src/algorithm/AES256GCM.ts
 import crypto from "crypto";
@@ -815,7 +905,7 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        const keyPair = TonWeb4.utils.nacl.sign.keyPair.fromSecretKey(
+        const keyPair = TonWeb5.utils.nacl.sign.keyPair.fromSecretKey(
           Buffer.from(decryptedHex, "hex")
         );
         const publicKey = Buffer.from(keyPair.publicKey);
@@ -835,7 +925,7 @@ var KeyVaultService = class extends AES256GCM {
 
 // src/getBalance/index.ts
 import { JsonRpcProvider as JsonRpcProvider2 } from "ethers";
-import TonWeb6 from "tonweb";
+import TonWeb7 from "tonweb";
 
 // src/getBalance/solana.ts
 import { PublicKey as PublicKey4 } from "@solana/web3.js";
@@ -890,19 +980,19 @@ async function getBalance2(provider, {
 }
 
 // src/getBalance/ton.ts
-import TonWeb5 from "tonweb";
+import TonWeb6 from "tonweb";
 var getBalance3 = async ({
   provider,
   tokenAddress,
   address
 }) => {
-  const tonweb = new TonWeb5(provider ?? new TonWeb5.HttpProvider());
+  const tonweb = new TonWeb6(provider ?? new TonWeb6.HttpProvider());
   if (tokenAddress) {
     const jettonWalletAddress = await utils_exports.ton.getJettonWalletAddress(
       tokenAddress,
       address
     );
-    const jettonWallet = new TonWeb5.token.jetton.JettonWallet(tonweb.provider, {
+    const jettonWallet = new TonWeb6.token.jetton.JettonWallet(tonweb.provider, {
       address: jettonWalletAddress
     });
     const data = await jettonWallet.getData();
@@ -948,7 +1038,7 @@ function getBalance4({
       if (!provider) {
         throw new Error("Provider is required for TON");
       }
-      if (!(provider instanceof TonWeb6.HttpProvider)) {
+      if (!(provider instanceof TonWeb7.HttpProvider)) {
         throw new Error("Provider must be an instance of HttpProvider");
       }
       return await getBalance3({
@@ -1102,7 +1192,7 @@ async function getTokenInfo3({ address }) {
 }
 
 // src/getTokenInfo/ton.ts
-import { Address as Address3 } from "@ton/ton";
+import { Address as Address4 } from "@ton/ton";
 async function getTokenInfo4({ address }) {
   if (address === "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs") {
     const res = await fetch(`https://tonapi.io/v2/jettons/${address}`);
@@ -1117,7 +1207,7 @@ async function getTokenInfo4({ address }) {
       name: data.metadata.name,
       symbol: data.metadata.symbol,
       decimals: Number(data.metadata.decimals),
-      address: Address3.parse(address).toString({
+      address: Address4.parse(address).toString({
         urlSafe: true,
         bounceable: true
       }),
@@ -1143,7 +1233,7 @@ async function getTokenInfo4({ address }) {
       name: data.name,
       symbol: data.symbol,
       decimals: data.detail_platforms["the-open-network"].decimal_place,
-      address: Address3.parse(
+      address: Address4.parse(
         data.detail_platforms["the-open-network"].contract_address
       ).toString({
         urlSafe: true,
@@ -1293,7 +1383,7 @@ async function getBlockTime4({
 }
 
 // src/getTransfer/index.ts
-import { Address as Address4 } from "@ton/ton";
+import { Address as Address5 } from "@ton/ton";
 
 // src/getTransfer/evm.ts
 import { Interface } from "ethers";
@@ -1434,7 +1524,7 @@ async function getTransfers({
 }
 
 // src/getTransfer/ton.ts
-import TonWeb7 from "tonweb";
+import TonWeb8 from "tonweb";
 async function getTransfer2({
   client,
   source,
@@ -1468,8 +1558,8 @@ async function getTransfer2({
               slice.loadUint(64);
               const jettonAmount = slice.loadCoins();
               const receiverAddress = slice.loadAddress();
-              const jettonWallet = new TonWeb7.token.jetton.JettonWallet(
-                new TonWeb7.HttpProvider(),
+              const jettonWallet = new TonWeb8.token.jetton.JettonWallet(
+                new TonWeb8.HttpProvider(),
                 {
                   address: destinationAddress
                 }
@@ -1552,10 +1642,10 @@ function getTransfer3({
       if (!transfer) {
         return null;
       }
-      const sourceAddress = Address4.parse(source);
-      const destinationAddress = Address4.parse(destination);
-      const transferSourceAddress = Address4.parse(transfer.source);
-      const transferDestinationAddress = Address4.parse(transfer.destination);
+      const sourceAddress = Address5.parse(source);
+      const destinationAddress = Address5.parse(destination);
+      const transferSourceAddress = Address5.parse(transfer.source);
+      const transferDestinationAddress = Address5.parse(transfer.destination);
       if (sourceAddress.equals(transferSourceAddress) && destinationAddress.equals(transferDestinationAddress)) {
         return transfer;
       } else {
@@ -1568,8 +1658,6 @@ function getTransfer3({
 export {
   BLOCK_TIME_MS,
   ERC20_ABI,
-  JETTON_TRANSFER_NOTIFICATION_OP,
-  JETTON_TRANSFER_OP,
   KeyVaultService,
   NATIVE_TOKEN_POOL_PAIRS,
   NETWORKS,
