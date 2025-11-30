@@ -94,7 +94,11 @@ declare namespace index$3 {
   export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_hasATA as hasATA, waitForTransaction$2 as waitForTransaction };
 }
 
-declare function getJettonWalletAddress(minterAddress: string, ownerAddress: string): Promise<string>;
+declare function getJettonWalletAddress({ minterAddress, ownerAddress, client, }: {
+    minterAddress: string;
+    ownerAddress: string;
+    client?: TonClient;
+}): Promise<string>;
 
 declare function waitForTransaction$1({ client, hash, refetchInterval, refetchLimit, address, }: {
     client: TonClient;
@@ -104,18 +108,13 @@ declare function waitForTransaction$1({ client, hash, refetchInterval, refetchLi
     address: string;
 }): Promise<Transaction$1 | null>;
 
-declare function getTransaction({ txHash, address, client, }: {
-    txHash: string;
-    client: TonClient;
-    address: string;
-}): Promise<_ton_core.Transaction>;
+declare function getMessageHash(boc: string): string;
 
-declare function getTxHash(boc: string): string;
-
-declare function createTransferBody({ tokenAmount, toAddress, }: {
+declare function createTransferBody({ tokenAmount, toAddress, responseAddress, }: {
     tokenAmount: string;
     toAddress: string;
-}): string;
+    responseAddress: string;
+}): _ton_core.Cell;
 
 declare function createWalletContractV5R1({ client, privateKey, }: {
     client: TonClient;
@@ -126,13 +125,21 @@ declare function createWalletContractV5R1({ client, privateKey, }: {
     state: 'active' | 'uninitialized' | 'frozen';
 }>;
 
+declare function sendTransfer({ client, minterAddress, privateKey, destination, amount, }: {
+    client: TonClient;
+    minterAddress?: string;
+    privateKey: string;
+    destination: string;
+    amount: string;
+}): Promise<string>;
+
 declare const index$2_createTransferBody: typeof createTransferBody;
 declare const index$2_createWalletContractV5R1: typeof createWalletContractV5R1;
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
-declare const index$2_getTransaction: typeof getTransaction;
-declare const index$2_getTxHash: typeof getTxHash;
+declare const index$2_getMessageHash: typeof getMessageHash;
+declare const index$2_sendTransfer: typeof sendTransfer;
 declare namespace index$2 {
-  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_getTxHash as getTxHash, waitForTransaction$1 as waitForTransaction };
+  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getMessageHash as getMessageHash, index$2_sendTransfer as sendTransfer, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {
@@ -257,8 +264,6 @@ declare const NATIVE_TOKEN_POOL_PAIRS: {
     TRON: string;
     BTC: string;
 };
-declare const JETTON_TRANSFER_OP = 260734629;
-declare const JETTON_TRANSFER_NOTIFICATION_OP = 1935855772;
 
 declare function getGasFee({ network, transaction, }: {
     network: (typeof NETWORKS)[keyof typeof NETWORKS];
@@ -290,4 +295,4 @@ type Transfer = {
 
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, ERC20_ABI, JETTON_TRANSFER_NOTIFICATION_OP, JETTON_TRANSFER_OP, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, index as utils };
+export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, index as utils };

@@ -3,7 +3,6 @@ import { Connection } from '@solana/web3.js';
 import { JsonRpcProvider } from 'ethers';
 import { TonClient, Address } from '@ton/ton';
 import { RPC_URL, NETWORKS } from '../constants';
-import { getTxHash } from '../utils/ton/getTxHash';
 import { getTransfer } from '.';
 
 describe('getTransfer', () => {
@@ -58,9 +57,9 @@ describe('getTransfer', () => {
     const transfer = await getTransfer({
       network: NETWORKS.TON,
       client,
-      source: 'UQAx1Kbv0kxStulX5v3k4r62E5Bi3a1vzkUz5ZIIkQYINAv7',
-      destination: 'UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO',
-    })('0df0497d823bcbeb6e480904d738086d277a038ce393d7fab515600f85be5055');
+      source: 'UQCQKBWGHus1L3PFSqan_aI3M_4eddTOqqfS9APf4r6rhqqO',
+      destination: 'UQAx1Kbv0kxStulX5v3k4r62E5Bi3a1vzkUz5ZIIkQYINAv7',
+    })('07f23a814d145d1f08144128cc2848475c8d5d1c25996659086104dac95c1308');
 
     expect(transfer).toBeDefined();
     expect(
@@ -80,7 +79,6 @@ describe('getTransfer', () => {
       'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
     );
 
-    console.log(transfer.tokenAddress, 'transfer.tokenAddress');
     expect(transfer.amount).toBe('10000');
   }, 10000);
 });
