@@ -4,7 +4,7 @@ export { _solana_web3_js as solana };
 import { JsonRpcProvider, Wallet, TransactionReceipt } from 'ethers';
 import * as ethers from 'ethers';
 export { ethers };
-import { TonClient, Transaction as Transaction$1 } from '@ton/ton';
+import { TonClient, Transaction as Transaction$1, OpenedContract, WalletContractV5R1 } from '@ton/ton';
 import * as ton from '@ton/ton';
 export { ton };
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
@@ -117,12 +117,22 @@ declare function createTransferBody({ tokenAmount, toAddress, }: {
     toAddress: string;
 }): string;
 
+declare function createWalletContractV5R1({ client, privateKey, }: {
+    client: TonClient;
+    privateKey: string;
+}): Promise<{
+    address: string;
+    contract: OpenedContract<WalletContractV5R1>;
+    state: 'active' | 'uninitialized' | 'frozen';
+}>;
+
 declare const index$2_createTransferBody: typeof createTransferBody;
+declare const index$2_createWalletContractV5R1: typeof createWalletContractV5R1;
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
 declare const index$2_getTransaction: typeof getTransaction;
 declare const index$2_getTxHash: typeof getTxHash;
 declare namespace index$2 {
-  export { index$2_createTransferBody as createTransferBody, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_getTxHash as getTxHash, waitForTransaction$1 as waitForTransaction };
+  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getTransaction as getTransaction, index$2_getTxHash as getTxHash, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {

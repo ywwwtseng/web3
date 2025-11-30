@@ -503,6 +503,7 @@ async function waitForTransaction({
 var ton_exports = {};
 __export(ton_exports, {
   createTransferBody: () => createTransferBody,
+  createWalletContractV5R1: () => createWalletContractV5R1,
   getJettonWalletAddress: () => getJettonWalletAddress,
   getTransaction: () => getTransaction,
   getTxHash: () => getTxHash,
@@ -611,6 +612,31 @@ function createTransferBody({
   return beginCell2().storeUint(260734629, 32).storeUint(0, 64).storeCoins(new TonWeb2.utils.BN(tokenAmount)).storeAddress(Address2.parse(toAddress)).storeAddress(Address2.parse(toAddress)).storeMaybeRef(null).storeCoins(TonWeb2.utils.toNano("0")).storeMaybeRef(null).endCell().toBoc().toString("base64");
 }
 
+// src/utils/ton/createWalletContractV5R1.ts
+import { WalletContractV5R1 } from "@ton/ton";
+import TonWeb3 from "tonweb";
+async function createWalletContractV5R1({
+  client,
+  privateKey
+}) {
+  const keyPair = TonWeb3.utils.nacl.sign.keyPair.fromSecretKey(
+    Buffer.from(privateKey, "hex")
+  );
+  const publicKey = Buffer.from(keyPair.publicKey);
+  const wallet = WalletContractV5R1.create({
+    workchain: 0,
+    publicKey
+  });
+  const contract = client.open(wallet);
+  const account = await client.getContractState(wallet.address);
+  const address = wallet.address.toString({ urlSafe: true, bounceable: false });
+  return {
+    address,
+    state: account.state,
+    contract
+  };
+}
+
 // src/utils/evm/index.ts
 var evm_exports = {};
 __export(evm_exports, {
@@ -693,8 +719,8 @@ async function waitForTransaction3({
 // src/KeyVaultService/index.ts
 import { Wallet } from "ethers";
 import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
-import { WalletContractV5R1 } from "@ton/ton";
-import TonWeb3 from "tonweb";
+import { WalletContractV5R1 as WalletContractV5R12 } from "@ton/ton";
+import TonWeb4 from "tonweb";
 
 // src/algorithm/AES256GCM.ts
 import crypto from "crypto";
@@ -777,7 +803,7 @@ var KeyVaultService = class extends AES256GCM {
         const keyPair = await mnemonicToWalletKey(mnemonic);
         const hexPrivateKey = Buffer.from(keyPair.secretKey).toString("hex");
         const encryptedPrivateKey = this.encrypt(hexPrivateKey);
-        const wallet = WalletContractV5R1.create({
+        const wallet = WalletContractV5R12.create({
           workchain: 0,
           publicKey: keyPair.publicKey
         });
@@ -789,11 +815,11 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        const keyPair = TonWeb3.utils.nacl.sign.keyPair.fromSecretKey(
+        const keyPair = TonWeb4.utils.nacl.sign.keyPair.fromSecretKey(
           Buffer.from(decryptedHex, "hex")
         );
         const publicKey = Buffer.from(keyPair.publicKey);
-        const wallet = WalletContractV5R1.create({
+        const wallet = WalletContractV5R12.create({
           workchain: 0,
           publicKey
         });
@@ -809,7 +835,7 @@ var KeyVaultService = class extends AES256GCM {
 
 // src/getBalance/index.ts
 import { JsonRpcProvider as JsonRpcProvider2 } from "ethers";
-import TonWeb5 from "tonweb";
+import TonWeb6 from "tonweb";
 
 // src/getBalance/solana.ts
 import { PublicKey as PublicKey4 } from "@solana/web3.js";
@@ -864,19 +890,19 @@ async function getBalance2(provider, {
 }
 
 // src/getBalance/ton.ts
-import TonWeb4 from "tonweb";
+import TonWeb5 from "tonweb";
 var getBalance3 = async ({
   provider,
   tokenAddress,
   address
 }) => {
-  const tonweb = new TonWeb4(provider ?? new TonWeb4.HttpProvider());
+  const tonweb = new TonWeb5(provider ?? new TonWeb5.HttpProvider());
   if (tokenAddress) {
     const jettonWalletAddress = await utils_exports.ton.getJettonWalletAddress(
       tokenAddress,
       address
     );
-    const jettonWallet = new TonWeb4.token.jetton.JettonWallet(tonweb.provider, {
+    const jettonWallet = new TonWeb5.token.jetton.JettonWallet(tonweb.provider, {
       address: jettonWalletAddress
     });
     const data = await jettonWallet.getData();
@@ -922,7 +948,7 @@ function getBalance4({
       if (!provider) {
         throw new Error("Provider is required for TON");
       }
-      if (!(provider instanceof TonWeb5.HttpProvider)) {
+      if (!(provider instanceof TonWeb6.HttpProvider)) {
         throw new Error("Provider must be an instance of HttpProvider");
       }
       return await getBalance3({
@@ -1408,7 +1434,7 @@ async function getTransfers({
 }
 
 // src/getTransfer/ton.ts
-import TonWeb6 from "tonweb";
+import TonWeb7 from "tonweb";
 async function getTransfer2({
   client,
   source,
@@ -1442,8 +1468,8 @@ async function getTransfer2({
               slice.loadUint(64);
               const jettonAmount = slice.loadCoins();
               const receiverAddress = slice.loadAddress();
-              const jettonWallet = new TonWeb6.token.jetton.JettonWallet(
-                new TonWeb6.HttpProvider(),
+              const jettonWallet = new TonWeb7.token.jetton.JettonWallet(
+                new TonWeb7.HttpProvider(),
                 {
                   address: destinationAddress
                 }
