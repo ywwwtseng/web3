@@ -5,7 +5,9 @@ export async function loadImage(url: string): Promise<Blob | null> {
       return null;
     }
 
-    return await res.blob();
+    const blob = await res.blob();
+
+    return blob;
   } catch (error) {
     return null;
   }

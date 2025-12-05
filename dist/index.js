@@ -49,7 +49,8 @@ async function loadImage(url) {
     if (!res.ok) {
       return null;
     }
-    return await res.blob();
+    const blob = await res.blob();
+    return blob;
   } catch (error) {
     return null;
   }
@@ -1120,7 +1121,9 @@ async function getTokenInfo({
 // src/getTokenInfo/bsc.ts
 import { Contract as Contract4, getAddress as getAddress2 } from "ethers";
 async function getTokenIcon2(address) {
-  const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
+  const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${getAddress2(
+    address
+  )}/logo.png`;
   const blob = await loadImage(url);
   return {
     blob,
@@ -1174,6 +1177,18 @@ async function getTokenInfo2({
 }
 
 // src/getTokenInfo/solana.ts
+async function getTokenIcon3(address) {
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/solana/contract/${address}`
+  );
+  const result = await res.json();
+  const url = result.image.small;
+  const blob = await loadImage(url);
+  return {
+    blob,
+    url
+  };
+}
 async function getTokenInfo3({ address }) {
   const res = await fetch(
     `https://lite-api.jup.ag/tokens/v2/search?query=${address}`
@@ -1184,15 +1199,15 @@ async function getTokenInfo3({ address }) {
       cause: `Token ${address} not found`
     });
   }
-  const blob = await loadImage(result[0].icon);
+  const icon = await getTokenIcon3(address);
   return {
     address: result[0].id,
     name: result[0].name,
     symbol: result[0].symbol,
     decimals: result[0].decimals,
-    icon: result[0].icon,
-    icon_file: blob ? new File([blob], result[0].name, {
-      type: blob.type
+    icon: icon.url,
+    icon_file: icon.blob ? new File([icon.blob], result[0].name, {
+      type: icon.blob.type
     }) : null,
     usdPrice: result[0].usdPrice,
     tokenProgram: result[0].tokenProgram

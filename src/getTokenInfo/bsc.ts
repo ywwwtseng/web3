@@ -3,7 +3,9 @@ import { ERC20_ABI } from '../abi/ERC20_ABI';
 import { loadImage } from '../utils';
 
 export async function getTokenIcon(address: string) {
-  const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${address}/logo.png`;
+  const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${getAddress(
+    address
+  )}/logo.png`;
   const blob = await loadImage(url);
 
   return {
