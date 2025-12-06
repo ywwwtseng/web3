@@ -125,7 +125,7 @@ declare function createWalletContractV5R1({ client, privateKey, }: {
     state: 'active' | 'uninitialized' | 'frozen';
 }>;
 
-declare function sendTransfer({ client, minterAddress, privateKey, destination, amount, }: {
+declare function sendTransaction({ client, minterAddress, privateKey, destination, amount, }: {
     client: TonClient;
     minterAddress?: string;
     privateKey: string;
@@ -137,9 +137,9 @@ declare const index$2_createTransferBody: typeof createTransferBody;
 declare const index$2_createWalletContractV5R1: typeof createWalletContractV5R1;
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
 declare const index$2_getMessageHash: typeof getMessageHash;
-declare const index$2_sendTransfer: typeof sendTransfer;
+declare const index$2_sendTransaction: typeof sendTransaction;
 declare namespace index$2 {
-  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getMessageHash as getMessageHash, index$2_sendTransfer as sendTransfer, waitForTransaction$1 as waitForTransaction };
+  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getMessageHash as getMessageHash, index$2_sendTransaction as sendTransaction, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {

@@ -505,7 +505,7 @@ __export(ton_exports, {
   createWalletContractV5R1: () => createWalletContractV5R1,
   getJettonWalletAddress: () => getJettonWalletAddress,
   getMessageHash: () => getMessageHash,
-  sendTransfer: () => sendTransfer,
+  sendTransaction: () => sendTransaction,
   waitForTransaction: () => waitForTransaction2
 });
 
@@ -663,7 +663,7 @@ async function createWalletContractV5R1({
   };
 }
 
-// src/utils/ton/sendTransfer.ts
+// src/utils/ton/sendTransaction.ts
 import {
   Address as Address4,
   beginCell as beginCell3,
@@ -673,7 +673,7 @@ import {
   storeMessage as storeMessage2
 } from "@ton/ton";
 import TonWeb4 from "tonweb";
-async function sendTransfer({
+async function sendTransaction({
   client,
   minterAddress,
   privateKey,
