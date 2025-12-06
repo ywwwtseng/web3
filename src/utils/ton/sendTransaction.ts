@@ -13,7 +13,7 @@ import { createWalletContractV5R1 } from './createWalletContractV5R1';
 import { getJettonWalletAddress } from './getJettonWalletAddress';
 import { createTransferBody } from './createTransferBody';
 
-export async function sendTransfer({
+export async function sendTransaction({
   client,
   minterAddress,
   privateKey,
