@@ -13,7 +13,7 @@ export function formatUnits(value: string | bigint, decimals: number): string {
   return fracPart.length ? `${intPart}.${fracPart}` : intPart;
 }
 
-// 人類可讀 → 鏈上整數
+// 鏈上整數
 export function parseUnits(value: string, decimals: number): bigint {
   if (!value.includes('.')) {
     return BigInt(value + '0'.repeat(decimals));
