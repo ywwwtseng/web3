@@ -15,6 +15,7 @@ __export(utils_exports, {
   evm: () => evm_exports,
   formatUnits: () => formatUnits,
   getRpcUrl: () => getRpcUrl,
+  hex: () => hex,
   loadImage: () => loadImage,
   parseUnits: () => parseUnits,
   solana: () => solana_exports,
@@ -40,6 +41,9 @@ function parseUnits(value, decimals) {
   }
   const fracPadded = fracPart.padEnd(decimals, "0");
   return BigInt(intPart ? intPart + fracPadded : fracPadded);
+}
+function hex(value) {
+  return `0x${BigInt(value).toString(16)}`;
 }
 
 // src/utils/loaders.ts
@@ -740,6 +744,7 @@ async function sendTransaction({
 var evm_exports = {};
 __export(evm_exports, {
   estimateFee: () => estimateFee,
+  getTransactions: () => getTransactions,
   waitForTransaction: () => waitForTransaction3
 });
 
@@ -813,6 +818,49 @@ async function waitForTransaction3({
       }
     }, refetchInterval);
   });
+}
+
+// src/utils/evm/getTransactions.ts
+async function getTransactions({
+  noderealApiKey,
+  address,
+  network,
+  category = ["external", "20"],
+  maxCount = 20
+}) {
+  let url;
+  if (network === NETWORKS.BSC) {
+    url = `https://bsc-mainnet.nodereal.io/v1/${noderealApiKey}`;
+  } else if (network === NETWORKS.ETHEREUM) {
+    url = `https://eth-mainnet.nodereal.io/v1/${noderealApiKey}`;
+  } else {
+    throw new Error(`Network ${network} not supported`);
+  }
+  const body = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "nr_getTransactionByAddress",
+    params: [
+      {
+        category,
+        address,
+        order: "desc",
+        maxCount: hex(maxCount)
+      }
+    ]
+  };
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.result;
 }
 
 // src/KeyVaultService/index.ts

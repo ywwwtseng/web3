@@ -13,6 +13,7 @@ import TonWeb from 'tonweb';
 
 declare function formatUnits(value: string | bigint, decimals: number): string;
 declare function parseUnits(value: string, decimals: number): bigint;
+declare function hex(value: string | number | bigint): string;
 
 declare function loadImage(url: string): Promise<Blob | null>;
 
@@ -157,18 +158,111 @@ declare function waitForTransaction({ provider, hash, refetchInterval, refetchLi
     refetchLimit?: number;
 }): Promise<TransactionReceipt | null>;
 
+/**
+ * 交易传输信息
+ */
+interface TransactionTransfer {
+    /** 交易 ID */
+    id: number;
+    /**
+     * 交易类别
+     * - 'external': 外部交易，即普通账户之间的原生代币（ETH/BNB）转账
+     * - 'internal': 内部交易，即合约调用产生的交易
+     * - '20': ERC-20 代币转账（同质化代币，如 USDT、USDC）
+     * - '721': ERC-721 NFT 转账（非同质化代币，每个代币都是唯一的）
+     * - '1155': ERC-1155 多代币标准转账（可以同时处理同质化和非同质化代币）
+     */
+    category: 'external' | 'internal' | '20' | '721' | '1155';
+    /** 区块号（十六进制） */
+    blockNum: string;
+    /** 发送方地址 */
+    from: string;
+    /** 接收方地址 */
+    to: string;
+    /** 转账金额（十六进制） */
+    value: string;
+    /** 资产名称 */
+    asset: string;
+    /** 名称 */
+    name: string;
+    /** 交易哈希 */
+    hash: string;
+    /** 合约地址（原生代币为全0地址） */
+    contractAddress: string;
+    /** 区块时间戳 */
+    blockTimeStamp: number;
+    /** 区块混合哈希 */
+    blockMixHash: string;
+    /** Gas 价格 */
+    gasPrice: number;
+    /** 使用的 Gas */
+    gasUsed: number;
+    /** 交易状态（1=成功，0=失败） */
+    receiptsStatus: number;
+    /** Gas 限制 */
+    gas: number;
+    /** 交易输入数据 */
+    input: string;
+    /** 日志索引 */
+    logIndex: number;
+    /** 追踪索引 */
+    traceIndex: number;
+    /** L1 费用（Layer 2 相关） */
+    l1Fee: string;
+    /** L1 费用标量（Layer 2 相关） */
+    l1FeeScalar: string;
+    /** L1 Gas 价格（Layer 2 相关） */
+    l1GasPrice: string;
+    /** L1 使用的 Gas（Layer 2 相关） */
+    l1GasUsed: string;
+    /** 交易类型（十六进制） */
+    txType: string;
+}
+/**
+ * 交易查询结果
+ */
+interface TransactionResult {
+    /** 分页键，用于获取下一页数据 */
+    pageKey: string;
+    /** 交易传输列表 */
+    transfers: TransactionTransfer[];
+}
+/**
+ * JSON-RPC 响应格式
+ */
+interface GetTransactionsResponse {
+    /** JSON-RPC 版本 */
+    jsonrpc: '2.0';
+    /** 请求 ID */
+    id: number;
+    /** 查询结果 */
+    result: TransactionResult;
+}
+declare function getTransactions({ noderealApiKey, address, network, category, maxCount, }: {
+    network: string;
+    noderealApiKey: string;
+    address: string;
+    category?: ('external' | 'internal' | '20' | '721' | '1155')[];
+    maxCount?: number;
+}): Promise<TransactionResult>;
+
+type index$1_GetTransactionsResponse = GetTransactionsResponse;
+type index$1_TransactionResult = TransactionResult;
+type index$1_TransactionTransfer = TransactionTransfer;
 declare const index$1_estimateFee: typeof estimateFee;
+declare const index$1_getTransactions: typeof getTransactions;
 declare const index$1_waitForTransaction: typeof waitForTransaction;
 declare namespace index$1 {
-  export { index$1_estimateFee as estimateFee, index$1_waitForTransaction as waitForTransaction };
+  export { type index$1_GetTransactionsResponse as GetTransactionsResponse, type index$1_TransactionResult as TransactionResult, type index$1_TransactionTransfer as TransactionTransfer, index$1_estimateFee as estimateFee, index$1_getTransactions as getTransactions, index$1_waitForTransaction as waitForTransaction };
 }
 
 declare const index_formatUnits: typeof formatUnits;
 declare const index_getRpcUrl: typeof getRpcUrl;
+declare const index_hex: typeof hex;
 declare const index_loadImage: typeof loadImage;
 declare const index_parseUnits: typeof parseUnits;
 declare namespace index {
-  export { index$1 as evm, index_formatUnits as formatUnits, index_getRpcUrl as getRpcUrl, index_loadImage as loadImage, index_parseUnits as parseUnits, index$3 as solana, index$2 as ton };
+  export { index$1 as evm, index_formatUnits as formatUnits, index_getRpcUrl as getRpcUrl, index_hex as hex, index_loadImage as loadImage, index_parseUnits as parseUnits, index$3 as solana, index$2 as ton };
 }
 
 declare class AES256GCM {

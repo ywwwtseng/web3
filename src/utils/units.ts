@@ -29,3 +29,7 @@ export function parseUnits(value: string, decimals: number): bigint {
 
   return BigInt(intPart ? intPart + fracPadded : fracPadded);
 }
+
+export function hex(value: string | number | bigint): string {
+  return `0x${BigInt(value).toString(16)}`;
+}
