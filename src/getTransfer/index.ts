@@ -1,7 +1,6 @@
 import { Connection } from '@solana/web3.js';
 import { JsonRpcProvider } from 'ethers';
 import { TonClient, Address } from '@ton/ton';
-import { getGasFee } from '../getGasFee';
 import * as evm from './evm';
 import * as solana from './solana';
 import * as ton from './ton';

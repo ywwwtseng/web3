@@ -1,10 +1,10 @@
 import * as _solana_web3_js from '@solana/web3.js';
 import { Keypair, Connection, SignaturesForAddressOptions, PublicKey, Transaction, ParsedTransactionWithMeta } from '@solana/web3.js';
 export { _solana_web3_js as solana };
-import { JsonRpcProvider, Wallet, TransactionReceipt } from 'ethers';
+import { TransactionReceipt, JsonRpcProvider, Wallet } from 'ethers';
 import * as ethers from 'ethers';
 export { ethers };
-import { TonClient, Transaction as Transaction$1, OpenedContract, WalletContractV5R1 } from '@ton/ton';
+import { Transaction as Transaction$1, TonClient, OpenedContract, WalletContractV5R1 } from '@ton/ton';
 import * as ton from '@ton/ton';
 export { ton };
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
@@ -79,6 +79,19 @@ declare function waitForTransaction$2({ connection, signature, refetchInterval, 
     refetchLimit?: number;
 }): Promise<ParsedTransactionWithMeta | null>;
 
+type Transfer<T = ParsedTransactionWithMeta | TransactionReceipt | Transaction$1> = {
+    source: string;
+    destination: string;
+    amount: string;
+    tokenAddress?: string;
+    transaction: T;
+};
+
+declare function getTransfers({ connection, hash, }: {
+    connection: Connection;
+    hash: string;
+}): Promise<Transfer<ParsedTransactionWithMeta>[]>;
+
 type index$3_CreateTransactionParams = CreateTransactionParams;
 type index$3_KeyPair = KeyPair;
 declare const index$3_KeyPair: typeof KeyPair;
@@ -90,9 +103,10 @@ declare const index$3_decodeTransfer: typeof decodeTransfer;
 declare const index$3_getAccountInfo: typeof getAccountInfo;
 declare const index$3_getParsedTransaction: typeof getParsedTransaction;
 declare const index$3_getSignaturesForAddress: typeof getSignaturesForAddress;
+declare const index$3_getTransfers: typeof getTransfers;
 declare const index$3_hasATA: typeof hasATA;
 declare namespace index$3 {
-  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_hasATA as hasATA, waitForTransaction$2 as waitForTransaction };
+  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_getTransfers as getTransfers, index$3_hasATA as hasATA, waitForTransaction$2 as waitForTransaction };
 }
 
 declare function getJettonWalletAddress({ minterAddress, ownerAddress, client, }: {
@@ -378,14 +392,6 @@ declare function getTransfer({ network, provider, connection, client, source, de
     source: string;
     destination: string;
 }): (hash: string) => Promise<Transfer>;
-
-type Transfer = {
-    source: string;
-    destination: string;
-    amount: string;
-    tokenAddress?: string;
-    transaction: ParsedTransactionWithMeta | TransactionReceipt | Transaction$1;
-};
 
 declare const ERC20_ABI: string[];
 

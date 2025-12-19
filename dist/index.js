@@ -121,6 +121,7 @@ __export(solana_exports, {
   getAccountInfo: () => getAccountInfo,
   getParsedTransaction: () => getParsedTransaction,
   getSignaturesForAddress: () => getSignaturesForAddress,
+  getTransfers: () => getTransfers,
   hasATA: () => hasATA,
   waitForTransaction: () => waitForTransaction
 });
@@ -500,6 +501,96 @@ async function waitForTransaction({
       }
     }, refetchInterval);
   });
+}
+
+// src/utils/solana/getTransfers.ts
+async function getTransfers({
+  connection,
+  hash
+}) {
+  const parsedTransaction = await solana_exports.waitForTransaction({
+    connection,
+    signature: hash,
+    refetchLimit: 10,
+    refetchInterval: 5e3
+  });
+  if (!parsedTransaction) {
+    throw new Error("SOLANA transaction not found");
+  }
+  const transfers = [];
+  const mint = parsedTransaction.meta?.preTokenBalances?.[0]?.mint;
+  if (mint) {
+    const preMap = /* @__PURE__ */ new Map();
+    const postMap = /* @__PURE__ */ new Map();
+    const senders = [];
+    const receivers = [];
+    parsedTransaction.meta?.preTokenBalances?.forEach((b) => {
+      if (b.owner) {
+        preMap.set(`${b.mint}_${b.owner}`, b);
+      }
+    });
+    parsedTransaction.meta?.postTokenBalances?.forEach((b) => {
+      if (b.owner) {
+        postMap.set(`${b.mint}_${b.owner}`, b);
+      }
+    });
+    postMap.forEach((postBalance, key) => {
+      const preBalance = preMap.get(key);
+      const postAmount = Number(postBalance.uiTokenAmount.amount ?? "0");
+      const preAmount = Number(preBalance?.uiTokenAmount.amount ?? "0");
+      const delta = postAmount - preAmount;
+      if (delta > 0) {
+        receivers.push({
+          mint: postBalance.mint,
+          owner: postBalance.owner,
+          delta
+        });
+      } else if (delta < 0) {
+        senders.push({
+          mint: postBalance.mint,
+          owner: postBalance.owner,
+          delta
+        });
+      }
+    });
+    receivers.forEach((receiver) => {
+      const sender = senders.find((s) => s.mint === receiver.mint);
+      if (!sender) return;
+      transfers.push({
+        tokenAddress: receiver.mint,
+        source: sender.owner,
+        destination: receiver.owner,
+        amount: receiver.delta.toString(),
+        transaction: parsedTransaction
+      });
+    });
+  } else {
+    for (const ix of parsedTransaction.transaction.message.instructions) {
+      if ("parsed" in ix) {
+        const parsed = ix.parsed;
+        if (parsed.type === "transfer") {
+          const info = parsed.info;
+          const source = info.source;
+          const destination = info.destination;
+          const lamports = Number(info.lamports);
+          const found = transfers.find(
+            (r) => r.destination === destination && r.source === source
+          );
+          if (!found) {
+            transfers.push({
+              source,
+              destination,
+              amount: lamports.toString(),
+              transaction: parsedTransaction
+            });
+          } else {
+            found.amount += lamports;
+          }
+        }
+      }
+    }
+  }
+  return transfers;
 }
 
 // src/utils/ton/index.ts
@@ -1502,96 +1593,6 @@ async function getTransfer({
     }
   }
   return null;
-}
-
-// src/getTransfer/solana.ts
-async function getTransfers({
-  connection,
-  hash
-}) {
-  const parsedTransaction = await solana_exports.waitForTransaction({
-    connection,
-    signature: hash,
-    refetchLimit: 10,
-    refetchInterval: 5e3
-  });
-  if (!parsedTransaction) {
-    throw new Error("SOLANA transaction not found");
-  }
-  const transfers = [];
-  const mint = parsedTransaction.meta?.preTokenBalances?.[0]?.mint;
-  if (mint) {
-    const preMap = /* @__PURE__ */ new Map();
-    const postMap = /* @__PURE__ */ new Map();
-    const senders = [];
-    const receivers = [];
-    parsedTransaction.meta?.preTokenBalances?.forEach((b) => {
-      if (b.owner) {
-        preMap.set(`${b.mint}_${b.owner}`, b);
-      }
-    });
-    parsedTransaction.meta?.postTokenBalances?.forEach((b) => {
-      if (b.owner) {
-        postMap.set(`${b.mint}_${b.owner}`, b);
-      }
-    });
-    postMap.forEach((postBalance, key) => {
-      const preBalance = preMap.get(key);
-      const postAmount = Number(postBalance.uiTokenAmount.amount ?? "0");
-      const preAmount = Number(preBalance?.uiTokenAmount.amount ?? "0");
-      const delta = postAmount - preAmount;
-      if (delta > 0) {
-        receivers.push({
-          mint: postBalance.mint,
-          owner: postBalance.owner,
-          delta
-        });
-      } else if (delta < 0) {
-        senders.push({
-          mint: postBalance.mint,
-          owner: postBalance.owner,
-          delta
-        });
-      }
-    });
-    receivers.forEach((receiver) => {
-      const sender = senders.find((s) => s.mint === receiver.mint);
-      if (!sender) return;
-      transfers.push({
-        tokenAddress: receiver.mint,
-        source: sender.owner,
-        destination: receiver.owner,
-        amount: receiver.delta.toString(),
-        transaction: parsedTransaction
-      });
-    });
-  } else {
-    for (const ix of parsedTransaction.transaction.message.instructions) {
-      if ("parsed" in ix) {
-        const parsed = ix.parsed;
-        if (parsed.type === "transfer") {
-          const info = parsed.info;
-          const source = info.source;
-          const destination = info.destination;
-          const lamports = Number(info.lamports);
-          const found = transfers.find(
-            (r) => r.destination === destination && r.source === source
-          );
-          if (!found) {
-            transfers.push({
-              source,
-              destination,
-              amount: lamports.toString(),
-              transaction: parsedTransaction
-            });
-          } else {
-            found.amount += lamports;
-          }
-        }
-      }
-    }
-  }
-  return transfers;
 }
 
 // src/getTransfer/ton.ts
