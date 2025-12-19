@@ -123,6 +123,7 @@ __export(solana_exports, {
   getSignaturesForAddress: () => getSignaturesForAddress,
   getTransfers: () => getTransfers,
   hasATA: () => hasATA,
+  sendTransaction: () => sendTransaction,
   waitForTransaction: () => waitForTransaction
 });
 
@@ -593,6 +594,43 @@ async function getTransfers({
   return transfers;
 }
 
+// src/utils/solana/sendTransaction.ts
+import { PublicKey as PublicKey4 } from "@solana/web3.js";
+async function sendTransaction({
+  privateKey,
+  connection,
+  source,
+  destination,
+  token,
+  amount
+}) {
+  const transaction = await createTransaction(
+    connection,
+    {
+      feePayer: source,
+      source,
+      destination,
+      mint: token?.token_address,
+      amount,
+      tokenProgram: token?.token_program
+    }
+  );
+  const latestBlockhash = await connection.getLatestBlockhash("finalized");
+  transaction.feePayer = new PublicKey4(source);
+  transaction.recentBlockhash = latestBlockhash.blockhash;
+  transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
+  const keypair = KeyPair.from(privateKey);
+  transaction.sign(keypair);
+  const signature = await connection.sendRawTransaction(
+    transaction.serialize(),
+    {
+      skipPreflight: false,
+      maxRetries: 3
+    }
+  );
+  return signature;
+}
+
 // src/utils/ton/index.ts
 var ton_exports = {};
 __export(ton_exports, {
@@ -600,7 +638,7 @@ __export(ton_exports, {
   createWalletContractV5R1: () => createWalletContractV5R1,
   getJettonWalletAddress: () => getJettonWalletAddress,
   getMessageHash: () => getMessageHash,
-  sendTransaction: () => sendTransaction,
+  sendTransaction: () => sendTransaction2,
   waitForTransaction: () => waitForTransaction2
 });
 
@@ -768,7 +806,7 @@ import {
   storeMessage as storeMessage2
 } from "@ton/ton";
 import TonWeb4 from "tonweb";
-async function sendTransaction({
+async function sendTransaction2({
   client,
   minterAddress,
   privateKey,
@@ -1076,7 +1114,7 @@ import { JsonRpcProvider as JsonRpcProvider2 } from "ethers";
 import TonWeb7 from "tonweb";
 
 // src/getBalance/solana.ts
-import { PublicKey as PublicKey4 } from "@solana/web3.js";
+import { PublicKey as PublicKey5 } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync as getAssociatedTokenAddressSync2,
   getAccount,
@@ -1092,8 +1130,8 @@ async function getBalance(connection, {
   if (tokenAddress) {
     const programId = tokenProgram === TOKEN_2022_PROGRAM_ID3.toString() ? TOKEN_2022_PROGRAM_ID3 : TOKEN_PROGRAM_ID3;
     const ownerATA = getAssociatedTokenAddressSync2(
-      new PublicKey4(tokenAddress),
-      new PublicKey4(address),
+      new PublicKey5(tokenAddress),
+      new PublicKey5(address),
       false,
       programId,
       ASSOCIATED_TOKEN_PROGRAM_ID3
@@ -1106,7 +1144,7 @@ async function getBalance(connection, {
     );
     return String(account.amount);
   } else {
-    const balance = await connection.getBalance(new PublicKey4(address));
+    const balance = await connection.getBalance(new PublicKey5(address));
     return String(balance);
   }
 }

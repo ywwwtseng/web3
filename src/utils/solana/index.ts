@@ -6,3 +6,4 @@ export * from './getAccountInfo';
 export * from './getParsedTransaction';
 export * from './waitForTransaction';
 export * from './getTransfers';
+export * from './sendTransaction';

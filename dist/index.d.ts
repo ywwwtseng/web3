@@ -92,6 +92,18 @@ declare function getTransfers({ connection, hash, }: {
     hash: string;
 }): Promise<Transfer<ParsedTransactionWithMeta>[]>;
 
+declare function sendTransaction$1({ privateKey, connection, source, destination, token, amount, }: {
+    privateKey: string;
+    connection: Connection;
+    source: string;
+    destination: string;
+    token?: {
+        token_address: string;
+        token_program: string;
+    };
+    amount: string;
+}): Promise<string>;
+
 type index$3_CreateTransactionParams = CreateTransactionParams;
 type index$3_KeyPair = KeyPair;
 declare const index$3_KeyPair: typeof KeyPair;
@@ -106,7 +118,7 @@ declare const index$3_getSignaturesForAddress: typeof getSignaturesForAddress;
 declare const index$3_getTransfers: typeof getTransfers;
 declare const index$3_hasATA: typeof hasATA;
 declare namespace index$3 {
-  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_getTransfers as getTransfers, index$3_hasATA as hasATA, waitForTransaction$2 as waitForTransaction };
+  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_getTransfers as getTransfers, index$3_hasATA as hasATA, sendTransaction$1 as sendTransaction, waitForTransaction$2 as waitForTransaction };
 }
 
 declare function getJettonWalletAddress({ minterAddress, ownerAddress, client, }: {
