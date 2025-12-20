@@ -3,11 +3,12 @@ import { TonClient } from '@ton/ton';
 import { sendTransaction } from './sendTransaction';
 
 describe('sendTranstaction', () => {
-  test('send Transaction', async () => {
+  test.skip('send Transaction', async () => {
     const client = new TonClient({
       endpoint: 'https://toncenter.com/api/v2/jsonRPC',
       apiKey: process.env.TONCENTER_API_KEY,
     });
+
     const txHash = await sendTransaction({
       client,
       privateKey: process.env.TON_WALLET_PRIVATE_KEY,

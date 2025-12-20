@@ -1,7 +1,7 @@
 import { JsonRpcProvider, Interface } from 'ethers';
-import * as utils from '../utils';
-import type { Transfer } from '../types';
-import { ERC20_ABI } from '../abi/ERC20_ABI';
+import { waitForTransaction } from './waitForTransaction';
+import type { Transfer } from '../../types';
+import { ERC20_ABI } from '../../abi/ERC20_ABI';
 
 const transferIface = new Interface(ERC20_ABI);
 
@@ -12,7 +12,7 @@ export async function getTransfer({
   provider: JsonRpcProvider;
   hash: string;
 }): Promise<Transfer | null> {
-  const receipt = await utils.evm.waitForTransaction({
+  const receipt = await waitForTransaction({
     provider,
     hash,
     refetchLimit: 10,

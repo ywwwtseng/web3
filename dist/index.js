@@ -142,26 +142,65 @@ var KeyPair = class {
 
 // src/utils/solana/getSignaturesForAddress.ts
 import {
+  PublicKey as PublicKey2
+} from "@solana/web3.js";
+
+// src/utils/solana/getATAsByOwner.ts
+import { TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID2, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+
+// src/utils/solana/getParsedTokenAccountsByOwner.ts
+import {
   PublicKey
 } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+async function getParsedTokenAccountsByOwner(connection, {
+  address,
+  programId = TOKEN_PROGRAM_ID
+}) {
+  const accounts = await connection.getParsedTokenAccountsByOwner(
+    new PublicKey(address),
+    { programId }
+  );
+  return accounts.value.map((v) => v.pubkey.toString());
+}
+
+// src/utils/solana/getATAsByOwner.ts
+async function getATAsByOwner(connection, {
+  address
+}) {
+  const [atas = [], atas2022 = []] = await Promise.all([
+    getParsedTokenAccountsByOwner(connection, { address, programId: TOKEN_PROGRAM_ID2 }),
+    getParsedTokenAccountsByOwner(connection, { address, programId: TOKEN_2022_PROGRAM_ID })
+  ]);
+  return [...atas, ...atas2022];
+}
+
+// src/utils/solana/getSignaturesForAddress.ts
 async function getSignaturesForAddress(connection, {
   address,
+  ata = false,
   ...options
 }) {
-  const result = await connection.getSignaturesForAddress(
-    new PublicKey(address),
-    {
-      limit: 3,
-      ...options
-    },
-    "finalized"
-  );
-  return result.map((s) => s.signature);
+  const atas = ata ? await getATAsByOwner(connection, { address }) : [];
+  const addresses = [address, ...atas];
+  const signatures = /* @__PURE__ */ new Set();
+  for (const address2 of addresses) {
+    const result = await connection.getSignaturesForAddress(
+      new PublicKey2(address2),
+      {
+        limit: 3,
+        ...options
+      },
+      "finalized"
+    );
+    result.forEach((s) => signatures.add(s.signature));
+  }
+  return Array.from(signatures);
 }
 
 // src/utils/solana/createTransaction.ts
 import {
-  PublicKey as PublicKey2,
+  PublicKey as PublicKey3,
   Transaction,
   SystemProgram
 } from "@solana/web3.js";
@@ -171,26 +210,26 @@ import {
   createTransferInstruction,
   createTransferCheckedInstruction,
   createAssociatedTokenAccountInstruction,
-  TOKEN_PROGRAM_ID,
-  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID3,
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID2,
   ASSOCIATED_TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import { BN } from "@project-serum/anchor";
 async function detectTokenProgram(connection, mintAddress) {
-  const mint = new PublicKey2(mintAddress);
+  const mint = new PublicKey3(mintAddress);
   const mintInfo = await connection.getAccountInfo(mint);
   if (!mintInfo) {
     throw new Error(`Mint account not found: ${mintAddress}`);
   }
-  if (mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
-    return TOKEN_2022_PROGRAM_ID;
+  if (mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID2)) {
+    return TOKEN_2022_PROGRAM_ID2;
   }
-  return TOKEN_PROGRAM_ID;
+  return TOKEN_PROGRAM_ID3;
 }
 async function hasATA(connection, mintAddress, ownerAddress, tokenProgram) {
   const ata = getAssociatedTokenAddressSync(
-    new PublicKey2(mintAddress),
-    new PublicKey2(ownerAddress),
+    new PublicKey3(mintAddress),
+    new PublicKey3(ownerAddress),
     false,
     tokenProgram,
     ASSOCIATED_TOKEN_PROGRAM_ID
@@ -226,8 +265,8 @@ async function createSolanaTransaction({
 }) {
   const transaction = new Transaction().add(
     SystemProgram.transfer({
-      fromPubkey: new PublicKey2(source),
-      toPubkey: new PublicKey2(destination),
+      fromPubkey: new PublicKey3(source),
+      toPubkey: new PublicKey3(destination),
       lamports: Number(amount)
     })
   );
@@ -242,20 +281,20 @@ async function createSPLTransaction(connection, {
   tokenProgram
 }) {
   if (tokenProgram) {
-    tokenProgram = new PublicKey2(tokenProgram).equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+    tokenProgram = new PublicKey3(tokenProgram).equals(TOKEN_2022_PROGRAM_ID2) ? TOKEN_2022_PROGRAM_ID2 : TOKEN_PROGRAM_ID3;
   } else {
     tokenProgram = await detectTokenProgram(connection, mint);
   }
   const mintInfo = await getMint(
     connection,
-    new PublicKey2(mint),
+    new PublicKey3(mint),
     "confirmed",
     tokenProgram
     // TOKEN_PROGRAM_ID or TOKEN_2022_PROGRAM_ID
   );
   const fromPayerATA = getAssociatedTokenAddressSync(
-    new PublicKey2(mint),
-    new PublicKey2(source),
+    new PublicKey3(mint),
+    new PublicKey3(source),
     false,
     tokenProgram,
     ASSOCIATED_TOKEN_PROGRAM_ID
@@ -270,31 +309,31 @@ async function createSPLTransaction(connection, {
   if (!hasRecipientATA) {
     instructions.push(
       createATAInstruction(
-        new PublicKey2(feePayer),
-        new PublicKey2(mint),
-        new PublicKey2(destination),
+        new PublicKey3(feePayer),
+        new PublicKey3(mint),
+        new PublicKey3(destination),
         tokenProgram
       )
     );
   }
   const recipientATA = getAssociatedTokenAddressSync(
-    new PublicKey2(mint),
-    new PublicKey2(destination),
+    new PublicKey3(mint),
+    new PublicKey3(destination),
     false,
     tokenProgram,
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
-  if (tokenProgram.equals(TOKEN_2022_PROGRAM_ID)) {
+  if (tokenProgram.equals(TOKEN_2022_PROGRAM_ID2)) {
     instructions.push(
       createTransferCheckedInstruction(
         fromPayerATA,
-        new PublicKey2(mint),
+        new PublicKey3(mint),
         recipientATA,
-        new PublicKey2(source),
+        new PublicKey3(source),
         new BN(amount),
         mintInfo.decimals,
         [],
-        TOKEN_2022_PROGRAM_ID
+        TOKEN_2022_PROGRAM_ID2
       )
     );
   } else {
@@ -302,10 +341,10 @@ async function createSPLTransaction(connection, {
       createTransferInstruction(
         fromPayerATA,
         recipientATA,
-        new PublicKey2(source),
+        new PublicKey3(source),
         Number(amount),
         [],
-        TOKEN_PROGRAM_ID
+        TOKEN_PROGRAM_ID3
       )
     );
   }
@@ -346,17 +385,17 @@ import {
 } from "@solana/web3.js";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID as ASSOCIATED_TOKEN_PROGRAM_ID2,
-  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID2,
-  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID2,
+  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID4,
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID3,
   decodeTransferInstruction,
   decodeTransferCheckedInstruction
 } from "@solana/spl-token";
 
 // src/utils/solana/getAccountInfo.ts
-import { PublicKey as PublicKey3 } from "@solana/web3.js";
+import { PublicKey as PublicKey4 } from "@solana/web3.js";
 async function getAccountInfo(connection, publicKey) {
   const accountInfo = await connection.getParsedAccountInfo(
-    new PublicKey3(publicKey)
+    new PublicKey4(publicKey)
   );
   const info = accountInfo.value?.data?.parsed?.info;
   return { owner: info?.owner, mint: info?.mint };
@@ -377,7 +416,7 @@ async function decodeTransfer(connection, base64) {
         destination,
         amount
       };
-    } else if (tx.instructions[0].programId.equals(TOKEN_PROGRAM_ID2)) {
+    } else if (tx.instructions[0].programId.equals(TOKEN_PROGRAM_ID4)) {
       const ix = tx.instructions[0];
       const parsed = decodeTransferInstruction(ix);
       const amount = parsed.data.amount.toString();
@@ -395,11 +434,11 @@ async function decodeTransfer(connection, base64) {
         amount,
         tokenAddress: sourceInfo.mint
       };
-    } else if (tx.instructions[0].programId.equals(TOKEN_2022_PROGRAM_ID2)) {
+    } else if (tx.instructions[0].programId.equals(TOKEN_2022_PROGRAM_ID3)) {
       const ix = tx.instructions[0];
       const parsed = decodeTransferCheckedInstruction(
         ix,
-        TOKEN_2022_PROGRAM_ID2
+        TOKEN_2022_PROGRAM_ID3
       );
       const amount = parsed.data.amount.toString();
       const sourceInfo = await getAccountInfo(
@@ -422,7 +461,7 @@ async function decodeTransfer(connection, base64) {
       (ix2) => ix2.programId.equals(ASSOCIATED_TOKEN_PROGRAM_ID2)
     );
     let ix = tx.instructions.find(
-      (ix2) => ix2.programId.equals(TOKEN_PROGRAM_ID2)
+      (ix2) => ix2.programId.equals(TOKEN_PROGRAM_ID4)
     );
     if (ix) {
       const parsed = decodeTransferInstruction(ix);
@@ -439,12 +478,12 @@ async function decodeTransfer(connection, base64) {
       };
     }
     ix = tx.instructions.find(
-      (ix2) => ix2.programId.equals(TOKEN_2022_PROGRAM_ID2)
+      (ix2) => ix2.programId.equals(TOKEN_2022_PROGRAM_ID3)
     );
     if (ix) {
       const parsed = decodeTransferCheckedInstruction(
         ix,
-        TOKEN_2022_PROGRAM_ID2
+        TOKEN_2022_PROGRAM_ID3
       );
       const amount = parsed.data.amount.toString();
       const sourceInfo = await getAccountInfo(
@@ -595,7 +634,7 @@ async function getTransfers({
 }
 
 // src/utils/solana/sendTransaction.ts
-import { PublicKey as PublicKey4 } from "@solana/web3.js";
+import { PublicKey as PublicKey5 } from "@solana/web3.js";
 async function sendTransaction({
   privateKey,
   connection,
@@ -616,7 +655,7 @@ async function sendTransaction({
     }
   );
   const latestBlockhash = await connection.getLatestBlockhash("finalized");
-  transaction.feePayer = new PublicKey4(source);
+  transaction.feePayer = new PublicKey5(source);
   transaction.recentBlockhash = latestBlockhash.blockhash;
   transaction.lastValidBlockHeight = latestBlockhash.lastValidBlockHeight;
   const keypair = KeyPair.from(privateKey);
@@ -638,6 +677,7 @@ __export(ton_exports, {
   createWalletContractV5R1: () => createWalletContractV5R1,
   getJettonWalletAddress: () => getJettonWalletAddress,
   getMessageHash: () => getMessageHash,
+  getTransfer: () => getTransfer,
   sendTransaction: () => sendTransaction2,
   waitForTransaction: () => waitForTransaction2
 });
@@ -869,11 +909,88 @@ async function sendTransaction2({
   return inMessageHash;
 }
 
+// src/utils/ton/getTransfer.ts
+import TonWeb5 from "tonweb";
+async function getTransfer({
+  client,
+  source,
+  hash
+}) {
+  const transaction = await waitForTransaction2({
+    client,
+    hash,
+    address: source,
+    refetchLimit: 10,
+    refetchInterval: 3e3
+  });
+  if (!transaction) {
+    throw new Error("TON transaction not found");
+  }
+  const outMessages = Array.from(transaction.outMessages.values());
+  for (const msg of outMessages) {
+    const info = msg?.info;
+    if (info?.type !== "internal") continue;
+    const sourceAddress = info.src?.toString();
+    const destinationAddress = info.dest?.toString();
+    if (!sourceAddress || !destinationAddress) continue;
+    const body = msg?.body;
+    if (body && typeof body === "object" && "beginParse" in body) {
+      try {
+        const slice = body.beginParse();
+        if (slice.remainingBits >= 32) {
+          const opCode = slice.loadUint(32);
+          if (opCode === JETTON_TRANSFER_OP) {
+            if (slice.remainingBits >= 64) {
+              slice.loadUint(64);
+              const jettonAmount = slice.loadCoins();
+              const receiverAddress = slice.loadAddress();
+              const jettonWallet = new TonWeb5.token.jetton.JettonWallet(
+                new TonWeb5.HttpProvider(),
+                {
+                  address: destinationAddress
+                }
+              );
+              const data = await jettonWallet.getData();
+              return {
+                source: sourceAddress,
+                // 發送者的用戶地址
+                destination: receiverAddress.toString(),
+                // 接收者的用戶地址
+                amount: jettonAmount.toString(),
+                tokenAddress: data.jettonMinterAddress.toString(
+                  true,
+                  true,
+                  true,
+                  false
+                ),
+                // Jetton minter address
+                transaction
+              };
+            }
+          }
+        }
+      } catch (error) {
+      }
+    }
+    const coins = info.value?.coins;
+    if (coins && coins > 0n) {
+      return {
+        source: sourceAddress,
+        destination: destinationAddress,
+        amount: coins.toString(),
+        transaction
+      };
+    }
+  }
+  return null;
+}
+
 // src/utils/evm/index.ts
 var evm_exports = {};
 __export(evm_exports, {
   estimateFee: () => estimateFee,
   getTransactions: () => getTransactions,
+  getTransfer: () => getTransfer2,
   waitForTransaction: () => waitForTransaction3
 });
 
@@ -992,11 +1109,59 @@ async function getTransactions({
   return data.result;
 }
 
+// src/utils/evm/getTransfer.ts
+import { Interface } from "ethers";
+var transferIface = new Interface(ERC20_ABI);
+async function getTransfer2({
+  provider,
+  hash
+}) {
+  const receipt = await waitForTransaction3({
+    provider,
+    hash,
+    refetchLimit: 10,
+    refetchInterval: 5e3
+  });
+  if (!receipt) {
+    throw new Error("EVM transaction not found");
+  }
+  if (receipt.status !== 1) {
+    return null;
+  }
+  const transaction = await provider.getTransaction(receipt.hash);
+  if (transaction.value && transaction.value > 0n && receipt.logs.length === 0) {
+    return {
+      source: transaction.from,
+      destination: transaction.to,
+      amount: transaction.value.toString(),
+      transaction: receipt
+    };
+  }
+  for (const log of receipt.logs) {
+    try {
+      const parsed = transferIface.parseLog(log);
+      if (parsed?.name === "Transfer") {
+        const tokenAddress = log.address;
+        const rawAmount = parsed.args.value;
+        return {
+          source: parsed.args.from,
+          destination: parsed.args.to,
+          amount: rawAmount.toString(),
+          tokenAddress,
+          transaction: receipt
+        };
+      }
+    } catch (err) {
+    }
+  }
+  return null;
+}
+
 // src/KeyVaultService/index.ts
 import { Wallet } from "ethers";
 import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
 import { WalletContractV5R1 as WalletContractV5R12 } from "@ton/ton";
-import TonWeb5 from "tonweb";
+import TonWeb6 from "tonweb";
 
 // src/algorithm/AES256GCM.ts
 import crypto from "crypto";
@@ -1091,7 +1256,7 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        const keyPair = TonWeb5.utils.nacl.sign.keyPair.fromSecretKey(
+        const keyPair = TonWeb6.utils.nacl.sign.keyPair.fromSecretKey(
           Buffer.from(decryptedHex, "hex")
         );
         const publicKey = Buffer.from(keyPair.publicKey);
@@ -1110,16 +1275,16 @@ var KeyVaultService = class extends AES256GCM {
 };
 
 // src/getBalance/index.ts
-import { JsonRpcProvider as JsonRpcProvider2 } from "ethers";
-import TonWeb7 from "tonweb";
+import { JsonRpcProvider as JsonRpcProvider3 } from "ethers";
+import TonWeb8 from "tonweb";
 
 // src/getBalance/solana.ts
-import { PublicKey as PublicKey5 } from "@solana/web3.js";
+import { PublicKey as PublicKey6 } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync as getAssociatedTokenAddressSync2,
   getAccount,
-  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID3,
-  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID3,
+  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID5,
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID4,
   ASSOCIATED_TOKEN_PROGRAM_ID as ASSOCIATED_TOKEN_PROGRAM_ID3
 } from "@solana/spl-token";
 async function getBalance(connection, {
@@ -1128,10 +1293,10 @@ async function getBalance(connection, {
   tokenProgram
 }) {
   if (tokenAddress) {
-    const programId = tokenProgram === TOKEN_2022_PROGRAM_ID3.toString() ? TOKEN_2022_PROGRAM_ID3 : TOKEN_PROGRAM_ID3;
+    const programId = tokenProgram === TOKEN_2022_PROGRAM_ID4.toString() ? TOKEN_2022_PROGRAM_ID4 : TOKEN_PROGRAM_ID5;
     const ownerATA = getAssociatedTokenAddressSync2(
-      new PublicKey5(tokenAddress),
-      new PublicKey5(address),
+      new PublicKey6(tokenAddress),
+      new PublicKey6(address),
       false,
       programId,
       ASSOCIATED_TOKEN_PROGRAM_ID3
@@ -1144,7 +1309,7 @@ async function getBalance(connection, {
     );
     return String(account.amount);
   } else {
-    const balance = await connection.getBalance(new PublicKey5(address));
+    const balance = await connection.getBalance(new PublicKey6(address));
     return String(balance);
   }
 }
@@ -1166,19 +1331,19 @@ async function getBalance2(provider, {
 }
 
 // src/getBalance/ton.ts
-import TonWeb6 from "tonweb";
+import TonWeb7 from "tonweb";
 var getBalance3 = async ({
   provider,
   tokenAddress,
   address
 }) => {
-  const tonweb = new TonWeb6(provider ?? new TonWeb6.HttpProvider());
+  const tonweb = new TonWeb7(provider ?? new TonWeb7.HttpProvider());
   if (tokenAddress) {
     const jettonWalletAddress = await utils_exports.ton.getJettonWalletAddress(
       tokenAddress,
       address
     );
-    const jettonWallet = new TonWeb6.token.jetton.JettonWallet(tonweb.provider, {
+    const jettonWallet = new TonWeb7.token.jetton.JettonWallet(tonweb.provider, {
       address: jettonWalletAddress
     });
     const data = await jettonWallet.getData();
@@ -1213,7 +1378,7 @@ function getBalance4({
       if (!provider) {
         throw new Error("Provider is required for BSC or ETHEREUM");
       }
-      if (!(provider instanceof JsonRpcProvider2)) {
+      if (!(provider instanceof JsonRpcProvider3)) {
         throw new Error("Provider must be an instance of JsonRpcProvider");
       }
       return await getBalance2(provider, {
@@ -1224,7 +1389,7 @@ function getBalance4({
       if (!provider) {
         throw new Error("Provider is required for TON");
       }
-      if (!(provider instanceof TonWeb7.HttpProvider)) {
+      if (!(provider instanceof TonWeb8.HttpProvider)) {
         throw new Error("Provider must be an instance of HttpProvider");
       }
       return await getBalance3({
@@ -1584,132 +1749,6 @@ async function getBlockTime4({
 
 // src/getTransfer/index.ts
 import { Address as Address6 } from "@ton/ton";
-
-// src/getTransfer/evm.ts
-import { Interface } from "ethers";
-var transferIface = new Interface(ERC20_ABI);
-async function getTransfer({
-  provider,
-  hash
-}) {
-  const receipt = await evm_exports.waitForTransaction({
-    provider,
-    hash,
-    refetchLimit: 10,
-    refetchInterval: 5e3
-  });
-  if (!receipt) {
-    throw new Error("EVM transaction not found");
-  }
-  if (receipt.status !== 1) {
-    return null;
-  }
-  const transaction = await provider.getTransaction(receipt.hash);
-  if (transaction.value && transaction.value > 0n && receipt.logs.length === 0) {
-    return {
-      source: transaction.from,
-      destination: transaction.to,
-      amount: transaction.value.toString(),
-      transaction: receipt
-    };
-  }
-  for (const log of receipt.logs) {
-    try {
-      const parsed = transferIface.parseLog(log);
-      if (parsed?.name === "Transfer") {
-        const tokenAddress = log.address;
-        const rawAmount = parsed.args.value;
-        return {
-          source: parsed.args.from,
-          destination: parsed.args.to,
-          amount: rawAmount.toString(),
-          tokenAddress,
-          transaction: receipt
-        };
-      }
-    } catch (err) {
-    }
-  }
-  return null;
-}
-
-// src/getTransfer/ton.ts
-import TonWeb8 from "tonweb";
-async function getTransfer2({
-  client,
-  source,
-  hash
-}) {
-  const transaction = await ton_exports.waitForTransaction({
-    client,
-    hash,
-    address: source,
-    refetchLimit: 10,
-    refetchInterval: 3e3
-  });
-  if (!transaction) {
-    throw new Error("TON transaction not found");
-  }
-  const outMessages = Array.from(transaction.outMessages.values());
-  for (const msg of outMessages) {
-    const info = msg?.info;
-    if (info?.type !== "internal") continue;
-    const sourceAddress = info.src?.toString();
-    const destinationAddress = info.dest?.toString();
-    if (!sourceAddress || !destinationAddress) continue;
-    const body = msg?.body;
-    if (body && typeof body === "object" && "beginParse" in body) {
-      try {
-        const slice = body.beginParse();
-        if (slice.remainingBits >= 32) {
-          const opCode = slice.loadUint(32);
-          if (opCode === JETTON_TRANSFER_OP) {
-            if (slice.remainingBits >= 64) {
-              slice.loadUint(64);
-              const jettonAmount = slice.loadCoins();
-              const receiverAddress = slice.loadAddress();
-              const jettonWallet = new TonWeb8.token.jetton.JettonWallet(
-                new TonWeb8.HttpProvider(),
-                {
-                  address: destinationAddress
-                }
-              );
-              const data = await jettonWallet.getData();
-              return {
-                source: sourceAddress,
-                // 發送者的用戶地址
-                destination: receiverAddress.toString(),
-                // 接收者的用戶地址
-                amount: jettonAmount.toString(),
-                tokenAddress: data.jettonMinterAddress.toString(
-                  true,
-                  true,
-                  true,
-                  false
-                ),
-                // Jetton minter address
-                transaction
-              };
-            }
-          }
-        }
-      } catch (error) {
-      }
-    }
-    const coins = info.value?.coins;
-    if (coins && coins > 0n) {
-      return {
-        source: sourceAddress,
-        destination: destinationAddress,
-        amount: coins.toString(),
-        transaction
-      };
-    }
-  }
-  return null;
-}
-
-// src/getTransfer/index.ts
 function getTransfer3({
   network,
   provider,
@@ -1723,7 +1762,7 @@ function getTransfer3({
       if (!provider) {
         throw new Error("Provider is required for EVM");
       }
-      const transfer = await getTransfer({
+      const transfer = await evm_exports.getTransfer({
         provider,
         hash
       });
@@ -1733,7 +1772,7 @@ function getTransfer3({
         return null;
       }
     } else if (network === NETWORKS.SOLANA) {
-      const transfers = await getTransfers({
+      const transfers = await solana_exports.getTransfers({
         connection,
         hash
       });
@@ -1744,7 +1783,7 @@ function getTransfer3({
       if (!client) {
         throw new Error("Client is required for TON");
       }
-      const transfer = await getTransfer2({
+      const transfer = await ton_exports.getTransfer({
         client,
         source,
         hash

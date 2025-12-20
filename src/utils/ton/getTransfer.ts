@@ -1,8 +1,8 @@
 import { TonClient } from '@ton/ton';
 import TonWeb from 'tonweb';
-import * as utils from '../utils';
-import type { Transfer } from '../types';
-import { JETTON_TRANSFER_OP } from '../utils/ton/constants';
+import type { Transfer } from '../../types';
+import { waitForTransaction } from './waitForTransaction';
+import { JETTON_TRANSFER_OP } from './constants';
 
 export async function getTransfer({
   client,
@@ -13,7 +13,7 @@ export async function getTransfer({
   source: string;
   hash: string;
 }): Promise<Transfer | null> {
-  const transaction = await utils.ton.waitForTransaction({
+  const transaction = await waitForTransaction({
     client,
     hash,
     address: source,

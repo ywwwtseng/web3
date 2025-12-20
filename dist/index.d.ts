@@ -26,8 +26,9 @@ declare class KeyPair {
     static generate(): Keypair;
 }
 
-declare function getSignaturesForAddress(connection: Connection, { address, ...options }: {
+declare function getSignaturesForAddress(connection: Connection, { address, ata, ...options }: {
     address: string;
+    ata?: boolean;
 } & SignaturesForAddressOptions): Promise<string[]>;
 
 declare function hasATA(connection: Connection, mintAddress: string | PublicKey, ownerAddress: string | PublicKey, tokenProgram: typeof TOKEN_PROGRAM_ID | typeof TOKEN_2022_PROGRAM_ID): Promise<boolean>;
@@ -160,13 +161,19 @@ declare function sendTransaction({ client, minterAddress, privateKey, destinatio
     amount: string;
 }): Promise<string>;
 
+declare function getTransfer$2({ client, source, hash, }: {
+    client: TonClient;
+    source: string;
+    hash: string;
+}): Promise<Transfer | null>;
+
 declare const index$2_createTransferBody: typeof createTransferBody;
 declare const index$2_createWalletContractV5R1: typeof createWalletContractV5R1;
 declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
 declare const index$2_getMessageHash: typeof getMessageHash;
 declare const index$2_sendTransaction: typeof sendTransaction;
 declare namespace index$2 {
-  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getMessageHash as getMessageHash, index$2_sendTransaction as sendTransaction, waitForTransaction$1 as waitForTransaction };
+  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getMessageHash as getMessageHash, getTransfer$2 as getTransfer, index$2_sendTransaction as sendTransaction, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {
@@ -272,6 +279,11 @@ declare function getTransactions({ noderealApiKey, address, network, category, m
     maxCount?: number;
 }): Promise<TransactionResult>;
 
+declare function getTransfer$1({ provider, hash, }: {
+    provider: JsonRpcProvider;
+    hash: string;
+}): Promise<Transfer | null>;
+
 type index$1_GetTransactionsResponse = GetTransactionsResponse;
 type index$1_TransactionResult = TransactionResult;
 type index$1_TransactionTransfer = TransactionTransfer;
@@ -279,7 +291,7 @@ declare const index$1_estimateFee: typeof estimateFee;
 declare const index$1_getTransactions: typeof getTransactions;
 declare const index$1_waitForTransaction: typeof waitForTransaction;
 declare namespace index$1 {
-  export { type index$1_GetTransactionsResponse as GetTransactionsResponse, type index$1_TransactionResult as TransactionResult, type index$1_TransactionTransfer as TransactionTransfer, index$1_estimateFee as estimateFee, index$1_getTransactions as getTransactions, index$1_waitForTransaction as waitForTransaction };
+  export { type index$1_GetTransactionsResponse as GetTransactionsResponse, type index$1_TransactionResult as TransactionResult, type index$1_TransactionTransfer as TransactionTransfer, index$1_estimateFee as estimateFee, index$1_getTransactions as getTransactions, getTransfer$1 as getTransfer, index$1_waitForTransaction as waitForTransaction };
 }
 
 declare const index_formatUnits: typeof formatUnits;

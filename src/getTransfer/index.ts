@@ -1,9 +1,7 @@
 import { Connection } from '@solana/web3.js';
 import { JsonRpcProvider } from 'ethers';
 import { TonClient, Address } from '@ton/ton';
-import * as evm from './evm';
-import * as solana from './solana';
-import * as ton from './ton';
+import * as utils from '../utils';
 import { NETWORKS } from '../constants';
 
 export function getTransfer({
@@ -27,7 +25,7 @@ export function getTransfer({
         throw new Error('Provider is required for EVM');
       }
 
-      const transfer = await evm.getTransfer({
+      const transfer = await utils.evm.getTransfer({
         provider,
         hash,
       });
@@ -42,7 +40,7 @@ export function getTransfer({
         return null;
       }
     } else if (network === NETWORKS.SOLANA) {
-      const transfers = await solana.getTransfers({
+      const transfers = await utils.solana.getTransfers({
         connection,
         hash,
       });
@@ -58,7 +56,7 @@ export function getTransfer({
         throw new Error('Client is required for TON');
       }
 
-      const transfer = await ton.getTransfer({
+      const transfer = await utils.ton.getTransfer({
         client,
         source,
         hash,

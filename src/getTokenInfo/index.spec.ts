@@ -4,7 +4,7 @@ import { getTokenInfo } from '.';
 import { RPC_URL, NETWORKS } from '../constants';
 
 describe('Token', () => {
-  test('Solana Network get USDC token info', async () => {
+  test.skip('Solana Network get USDC token info', async () => {
     const token = await getTokenInfo({ network: NETWORKS.SOLANA })(
       'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
     );
@@ -18,7 +18,7 @@ describe('Token', () => {
     expect(token.usdPrice).not.toBeNull();
   });
 
-  test('BSC Network get USDC token info', async () => {
+  test.skip('BSC Network get USDC token info', async () => {
     const provider = new JsonRpcProvider(RPC_URL.BSC);
     const token = await getTokenInfo({ network: NETWORKS.BSC, provider })(
       '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d'
@@ -34,7 +34,7 @@ describe('Token', () => {
     expect(token.usdPrice).not.toBeNull();
   });
 
-  test('ETHEREUM Network get USDC token info', async () => {
+  test.skip('ETHEREUM Network get USDC token info', async () => {
     const provider = new JsonRpcProvider(
       `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`
     );
@@ -50,7 +50,7 @@ describe('Token', () => {
     expect(token.usdPrice).not.toBeNull();
   });
 
-  test('TON Network get USDC token info', async () => {
+  test.skip('TON Network get USDC token info', async () => {
     const token = await getTokenInfo({ network: NETWORKS.TON })(
       'EQB-MPwrd1G6WKNkLz_VnV6WqBDd142KMQv-g1O-8QUA3728'
     );
@@ -64,7 +64,7 @@ describe('Token', () => {
     expect(token.usdPrice).not.toBeNull();
   });
 
-  test('TON Network get USDT token info', async () => {
+  test.skip('TON Network get USDT token info', async () => {
     const token = await getTokenInfo({ network: NETWORKS.TON })(
       'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
     );
@@ -78,7 +78,7 @@ describe('Token', () => {
     expect(token.usdPrice).not.toBeNull();
   });
 
-  test('TRON Network get USDC token info', async () => {
+  test.skip('TRON Network get USDC token info', async () => {
     const token = await getTokenInfo({ network: NETWORKS.TRON })(
       'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8'
     );

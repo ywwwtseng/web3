@@ -1,14 +1,16 @@
 import { test, expect } from 'bun:test';
 import { Connection } from '@solana/web3.js';
 import { getSignaturesForAddress } from './getSignaturesForAddress';
-import { RPC_URL } from '../../constants';
 
 test('getSignaturesForAddress', async () => {
-  const connection = new Connection(RPC_URL.SOLANA_DEV);
+  const connection = new Connection(process.env.RPC_SOLANA_URL);
 
   const signatures = await getSignaturesForAddress(connection, {
-    address: 'HSb2Krq5gAD8syfgwikbiF4iJzVXwxU41p6By34Zh5nK',
+    address: 'Cw2tnLijghtGwQTEq2V6KYDPjoyssHL2Ausi4kpHKtZG',
+    limit: 20,
   });
+
+  console.log(signatures);
 
   expect(signatures).toBeDefined();
   expect(signatures.length).toBeGreaterThan(0);
