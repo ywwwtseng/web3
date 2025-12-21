@@ -1,9 +1,7 @@
 import { ParsedTransactionWithMeta } from '@solana/web3.js';
 import { TransactionReceipt } from 'ethers';
 import { Transaction } from '@ton/ton';
-import * as solana from './solana';
-import * as evm from './evm';
-import * as ton from './ton';
+import * as utils from '../utils';
 import { NETWORKS } from '../constants';
 
 export function getGasFee({
@@ -18,11 +16,11 @@ export function getGasFee({
   }
 
   if (network === NETWORKS.SOLANA) {
-    return solana.getGasFee(transaction as ParsedTransactionWithMeta);
+    return utils.solana.getGasFee(transaction as ParsedTransactionWithMeta);
   } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
-    return evm.getGasFee(transaction as TransactionReceipt);
+    return utils.evm.getGasFee(transaction as TransactionReceipt);
   } else if (network === NETWORKS.TON) {
-    return ton.getGasFee(transaction as Transaction);
+    return utils.ton.getGasFee(transaction as Transaction);
   }
 
   throw new Error(`Network ${network} not supported`);

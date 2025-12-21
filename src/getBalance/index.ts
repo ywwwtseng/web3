@@ -1,9 +1,7 @@
 import { Connection } from '@solana/web3.js';
 import { JsonRpcProvider } from 'ethers';
 import TonWeb from 'tonweb';
-import * as solana from './solana';
-import * as evm from './evm';
-import * as ton from './ton';
+import * as utils from '../utils';
 import { NETWORKS } from '../constants';
 
 export function getBalance({
@@ -29,7 +27,7 @@ export function getBalance({
         throw new Error('Connection is required for SOLANA');
       }
 
-      return await solana.getBalance(connection, {
+      return await utils.solana.getBalance(connection, {
         address,
         tokenAddress,
         tokenProgram,
@@ -43,7 +41,7 @@ export function getBalance({
         throw new Error('Provider must be an instance of JsonRpcProvider');
       }
 
-      return await evm.getBalance(provider, {
+      return await utils.evm.getBalance(provider, {
         address,
         tokenAddress,
       });
@@ -56,7 +54,7 @@ export function getBalance({
         throw new Error('Provider must be an instance of HttpProvider');
       }
 
-      return await ton.getBalance({
+      return await utils.ton.getBalance({
         provider,
         address,
         tokenAddress,

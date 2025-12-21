@@ -1,5 +1,5 @@
 import TonWeb from 'tonweb';
-import { utils } from '../index';
+import { getJettonWalletAddress } from './getJettonWalletAddress';
 
 export const getBalance = async ({
   provider,
@@ -13,10 +13,10 @@ export const getBalance = async ({
   const tonweb = new TonWeb(provider ?? new TonWeb.HttpProvider());
 
   if (tokenAddress) {
-    const jettonWalletAddress = await utils.ton.getJettonWalletAddress(
-      tokenAddress,
-      address
-    );
+    const jettonWalletAddress = await getJettonWalletAddress({
+      minterAddress: tokenAddress,
+      ownerAddress: address,
+    });
 
     const jettonWallet = new TonWeb.token.jetton.JettonWallet(tonweb.provider, {
       address: jettonWalletAddress,

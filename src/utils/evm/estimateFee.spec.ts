@@ -20,13 +20,14 @@ describe('estimateFee', () => {
     const provider = new JsonRpcProvider(RPC_URL.BSC);
     const signer = new Wallet(wallet.privateKey, provider);
 
-    const gasPrice = await estimateFee({
+    const feeAmount = await estimateFee({
       provider,
-      tokenAddress: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      // tokenAddress: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
       signer,
       destination: '0x6d5e3A9a24171b206a781707Fe90B565e67dCD6C',
       amount: '0',
     });
-    expect(BigInt(gasPrice)).toBeGreaterThan(0n);
+    console.log(feeAmount);
+    expect(BigInt(feeAmount)).toBeGreaterThan(0n);
   });
 });

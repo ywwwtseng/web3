@@ -93,7 +93,7 @@ declare function getTransfers({ connection, hash, }: {
     hash: string;
 }): Promise<Transfer<ParsedTransactionWithMeta>[]>;
 
-declare function sendTransaction$1({ privateKey, connection, source, destination, token, amount, }: {
+declare function sendTransaction$2({ privateKey, connection, source, destination, token, amount, }: {
     privateKey: string;
     connection: Connection;
     source: string;
@@ -105,21 +105,49 @@ declare function sendTransaction$1({ privateKey, connection, source, destination
     amount: string;
 }): Promise<string>;
 
-type index$3_CreateTransactionParams = CreateTransactionParams;
-type index$3_KeyPair = KeyPair;
-declare const index$3_KeyPair: typeof KeyPair;
-declare const index$3_createATAInstruction: typeof createATAInstruction;
-declare const index$3_createSPLTransaction: typeof createSPLTransaction;
-declare const index$3_createSolanaTransaction: typeof createSolanaTransaction;
-declare const index$3_createTransaction: typeof createTransaction;
-declare const index$3_decodeTransfer: typeof decodeTransfer;
-declare const index$3_getAccountInfo: typeof getAccountInfo;
-declare const index$3_getParsedTransaction: typeof getParsedTransaction;
-declare const index$3_getSignaturesForAddress: typeof getSignaturesForAddress;
-declare const index$3_getTransfers: typeof getTransfers;
-declare const index$3_hasATA: typeof hasATA;
-declare namespace index$3 {
-  export { type index$3_CreateTransactionParams as CreateTransactionParams, index$3_KeyPair as KeyPair, index$3_createATAInstruction as createATAInstruction, index$3_createSPLTransaction as createSPLTransaction, index$3_createSolanaTransaction as createSolanaTransaction, index$3_createTransaction as createTransaction, index$3_decodeTransfer as decodeTransfer, index$3_getAccountInfo as getAccountInfo, index$3_getParsedTransaction as getParsedTransaction, index$3_getSignaturesForAddress as getSignaturesForAddress, index$3_getTransfers as getTransfers, index$3_hasATA as hasATA, sendTransaction$1 as sendTransaction, waitForTransaction$2 as waitForTransaction };
+declare function getBalance$3(connection: Connection, { address, tokenAddress, tokenProgram, }: {
+    address: string;
+    tokenAddress?: string | null;
+    tokenProgram?: string | null;
+}): Promise<string>;
+
+declare function getBlockTime$3(parsedTransactionWithMeta: ParsedTransactionWithMeta): number;
+
+declare function getGasFee$3(parsedTransactionWithMeta: ParsedTransactionWithMeta): string;
+
+declare function getTokenIcon(address: string): Promise<{
+    blob: Blob;
+    url: any;
+}>;
+declare function getTokenInfo$6({ address }: {
+    address: string;
+}): Promise<{
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+    icon: any;
+    icon_file: File;
+    usdPrice: string;
+    tokenProgram: string;
+}>;
+
+type index$4_CreateTransactionParams = CreateTransactionParams;
+type index$4_KeyPair = KeyPair;
+declare const index$4_KeyPair: typeof KeyPair;
+declare const index$4_createATAInstruction: typeof createATAInstruction;
+declare const index$4_createSPLTransaction: typeof createSPLTransaction;
+declare const index$4_createSolanaTransaction: typeof createSolanaTransaction;
+declare const index$4_createTransaction: typeof createTransaction;
+declare const index$4_decodeTransfer: typeof decodeTransfer;
+declare const index$4_getAccountInfo: typeof getAccountInfo;
+declare const index$4_getParsedTransaction: typeof getParsedTransaction;
+declare const index$4_getSignaturesForAddress: typeof getSignaturesForAddress;
+declare const index$4_getTokenIcon: typeof getTokenIcon;
+declare const index$4_getTransfers: typeof getTransfers;
+declare const index$4_hasATA: typeof hasATA;
+declare namespace index$4 {
+  export { type index$4_CreateTransactionParams as CreateTransactionParams, index$4_KeyPair as KeyPair, index$4_createATAInstruction as createATAInstruction, index$4_createSPLTransaction as createSPLTransaction, index$4_createSolanaTransaction as createSolanaTransaction, index$4_createTransaction as createTransaction, index$4_decodeTransfer as decodeTransfer, index$4_getAccountInfo as getAccountInfo, getBalance$3 as getBalance, getBlockTime$3 as getBlockTime, getGasFee$3 as getGasFee, index$4_getParsedTransaction as getParsedTransaction, index$4_getSignaturesForAddress as getSignaturesForAddress, index$4_getTokenIcon as getTokenIcon, getTokenInfo$6 as getTokenInfo, index$4_getTransfers as getTransfers, index$4_hasATA as hasATA, sendTransaction$2 as sendTransaction, waitForTransaction$2 as waitForTransaction };
 }
 
 declare function getJettonWalletAddress({ minterAddress, ownerAddress, client, }: {
@@ -153,7 +181,7 @@ declare function createWalletContractV5R1({ client, privateKey, }: {
     state: 'active' | 'uninitialized' | 'frozen';
 }>;
 
-declare function sendTransaction({ client, minterAddress, privateKey, destination, amount, }: {
+declare function sendTransaction$1({ client, minterAddress, privateKey, destination, amount, }: {
     client: TonClient;
     minterAddress?: string;
     privateKey: string;
@@ -167,13 +195,35 @@ declare function getTransfer$2({ client, source, hash, }: {
     hash: string;
 }): Promise<Transfer | null>;
 
-declare const index$2_createTransferBody: typeof createTransferBody;
-declare const index$2_createWalletContractV5R1: typeof createWalletContractV5R1;
-declare const index$2_getJettonWalletAddress: typeof getJettonWalletAddress;
-declare const index$2_getMessageHash: typeof getMessageHash;
-declare const index$2_sendTransaction: typeof sendTransaction;
-declare namespace index$2 {
-  export { index$2_createTransferBody as createTransferBody, index$2_createWalletContractV5R1 as createWalletContractV5R1, index$2_getJettonWalletAddress as getJettonWalletAddress, index$2_getMessageHash as getMessageHash, getTransfer$2 as getTransfer, index$2_sendTransaction as sendTransaction, waitForTransaction$1 as waitForTransaction };
+declare const getBalance$2: ({ provider, tokenAddress, address, }: {
+    provider?: InstanceType<typeof TonWeb.HttpProvider>;
+    tokenAddress?: string;
+    address: string;
+}) => Promise<string>;
+
+declare function getBlockTime$2(transaction: Transaction$1): number;
+
+declare function getGasFee$2(transaction: Transaction$1): string;
+
+declare function getTokenInfo$5({ address }: {
+    address: string;
+}): Promise<{
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+    icon: string;
+    icon_file: File;
+    tokenProgram: any;
+    usdPrice: string;
+}>;
+
+declare const index$3_createTransferBody: typeof createTransferBody;
+declare const index$3_createWalletContractV5R1: typeof createWalletContractV5R1;
+declare const index$3_getJettonWalletAddress: typeof getJettonWalletAddress;
+declare const index$3_getMessageHash: typeof getMessageHash;
+declare namespace index$3 {
+  export { index$3_createTransferBody as createTransferBody, index$3_createWalletContractV5R1 as createWalletContractV5R1, getBalance$2 as getBalance, getBlockTime$2 as getBlockTime, getGasFee$2 as getGasFee, index$3_getJettonWalletAddress as getJettonWalletAddress, index$3_getMessageHash as getMessageHash, getTokenInfo$5 as getTokenInfo, getTransfer$2 as getTransfer, sendTransaction$1 as sendTransaction, waitForTransaction$1 as waitForTransaction };
 }
 
 declare function estimateFee({ provider, tokenAddress, signer, destination, amount, }: {
@@ -284,14 +334,83 @@ declare function getTransfer$1({ provider, hash, }: {
     hash: string;
 }): Promise<Transfer | null>;
 
-type index$1_GetTransactionsResponse = GetTransactionsResponse;
-type index$1_TransactionResult = TransactionResult;
-type index$1_TransactionTransfer = TransactionTransfer;
-declare const index$1_estimateFee: typeof estimateFee;
-declare const index$1_getTransactions: typeof getTransactions;
-declare const index$1_waitForTransaction: typeof waitForTransaction;
+declare function getBalance$1(provider: JsonRpcProvider, { address, tokenAddress, }: {
+    address: string;
+    tokenAddress?: string | null;
+}): Promise<string>;
+
+declare function getBlockTime$1({ provider, receipt, }: {
+    provider: JsonRpcProvider;
+    receipt: TransactionReceipt;
+}): Promise<number>;
+
+declare function getGasFee$1(receipt: TransactionReceipt): string;
+
+declare function getTokenInfo$4({ provider, address, }: {
+    provider: JsonRpcProvider;
+    address: string;
+}): Promise<{
+    address: string;
+    name: any;
+    symbol: any;
+    decimals: number;
+    icon: any;
+    icon_file: File;
+    usdPrice: string;
+}>;
+
+declare function getTokenInfo$3({ provider, address, }: {
+    provider: JsonRpcProvider;
+    address: string;
+}): Promise<{
+    address: string;
+    name: any;
+    symbol: any;
+    decimals: number;
+    icon: string;
+    icon_file: File;
+    usdPrice: string;
+}>;
+
+declare const getTokenInfo$2: {
+    ethereum: typeof getTokenInfo$4;
+    bsc: typeof getTokenInfo$3;
+};
+
+declare function sendTransaction({ privateKey, provider, destination, token_address, amount, }: {
+    privateKey: string;
+    provider: JsonRpcProvider;
+    destination: string;
+    token_address?: string | null;
+    amount: string;
+}): Promise<string>;
+
+type index$2_GetTransactionsResponse = GetTransactionsResponse;
+type index$2_TransactionResult = TransactionResult;
+type index$2_TransactionTransfer = TransactionTransfer;
+declare const index$2_estimateFee: typeof estimateFee;
+declare const index$2_getTransactions: typeof getTransactions;
+declare const index$2_sendTransaction: typeof sendTransaction;
+declare const index$2_waitForTransaction: typeof waitForTransaction;
+declare namespace index$2 {
+  export { type index$2_GetTransactionsResponse as GetTransactionsResponse, type index$2_TransactionResult as TransactionResult, type index$2_TransactionTransfer as TransactionTransfer, index$2_estimateFee as estimateFee, getBalance$1 as getBalance, getBlockTime$1 as getBlockTime, getGasFee$1 as getGasFee, getTokenInfo$2 as getTokenInfo, index$2_getTransactions as getTransactions, getTransfer$1 as getTransfer, index$2_sendTransaction as sendTransaction, index$2_waitForTransaction as waitForTransaction };
+}
+
+declare function getTokenInfo$1({ address }: {
+    address: string;
+}): Promise<{
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+    icon: string;
+    icon_file: File;
+    tokenProgram: any;
+    usdPrice: string;
+}>;
+
 declare namespace index$1 {
-  export { type index$1_GetTransactionsResponse as GetTransactionsResponse, type index$1_TransactionResult as TransactionResult, type index$1_TransactionTransfer as TransactionTransfer, index$1_estimateFee as estimateFee, index$1_getTransactions as getTransactions, getTransfer$1 as getTransfer, index$1_waitForTransaction as waitForTransaction };
+  export { getTokenInfo$1 as getTokenInfo };
 }
 
 declare const index_formatUnits: typeof formatUnits;
@@ -300,7 +419,7 @@ declare const index_hex: typeof hex;
 declare const index_loadImage: typeof loadImage;
 declare const index_parseUnits: typeof parseUnits;
 declare namespace index {
-  export { index$1 as evm, index_formatUnits as formatUnits, index_getRpcUrl as getRpcUrl, index_hex as hex, index_loadImage as loadImage, index_parseUnits as parseUnits, index$3 as solana, index$2 as ton };
+  export { index$2 as evm, index_formatUnits as formatUnits, index_getRpcUrl as getRpcUrl, index_hex as hex, index_loadImage as loadImage, index_parseUnits as parseUnits, index$4 as solana, index$3 as ton, index$1 as tron };
 }
 
 declare class AES256GCM {

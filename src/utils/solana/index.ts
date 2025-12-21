@@ -7,3 +7,7 @@ export * from './getParsedTransaction';
 export * from './waitForTransaction';
 export * from './getTransfers';
 export * from './sendTransaction';
+export * from './getBalance';
+export * from './getBlockTime';
+export * from './getGasFee';
+export * from './getTokenInfo';

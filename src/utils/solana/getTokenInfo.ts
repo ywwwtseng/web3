@@ -1,4 +1,4 @@
-import { loadImage } from '../utils';
+import { loadImage } from '../loaders';
 
 export async function getTokenIcon(address: string) {
   const res = await fetch(
@@ -25,7 +25,7 @@ export async function getTokenInfo({ address }: { address: string }) {
     symbol: string;
     decimals: number;
     icon: string;
-    usdPrice: string;
+    usdPrice: number;
     tokenProgram: string;
   }[];
 
@@ -48,7 +48,7 @@ export async function getTokenInfo({ address }: { address: string }) {
           type: icon.blob.type,
         })
       : null,
-    usdPrice: result[0].usdPrice,
+    usdPrice: String(result[0].usdPrice),
     tokenProgram: result[0].tokenProgram,
   };
 }

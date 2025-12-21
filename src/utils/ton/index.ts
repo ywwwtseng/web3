@@ -5,3 +5,7 @@ export * from './createTransferBody';
 export * from './createWalletContractV5R1';
 export * from './sendTransaction';
 export * from './getTransfer';
+export * from './getBalance';
+export * from './getBlockTime';
+export * from './getGasFee';
+export * from './getTokenInfo';

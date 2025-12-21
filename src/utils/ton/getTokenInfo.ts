@@ -1,5 +1,5 @@
 import { Address } from '@ton/ton';
-import { loadImage } from '../utils';
+import { loadImage } from '../loaders';
 
 export async function getTokenInfo({ address }: { address: string }) {
   if (address === 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs') {

@@ -1,6 +1,6 @@
 import { JsonRpcProvider, Contract, getAddress } from 'ethers';
-import { ERC20_ABI } from '../abi/ERC20_ABI';
-import { loadImage } from '../utils';
+import { ERC20_ABI } from '../../../abi/ERC20_ABI';
+import { loadImage } from '../../loaders';
 
 export async function getTokenIcon(address: string) {
   const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${getAddress(

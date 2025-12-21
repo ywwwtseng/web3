@@ -1,5 +1,5 @@
 import { JsonRpcProvider, Contract } from 'ethers';
-import { ERC20_ABI } from '../abi/ERC20_ABI';
+import { ERC20_ABI } from '../../abi/ERC20_ABI';
 
 export async function getBalance(
   provider: JsonRpcProvider,

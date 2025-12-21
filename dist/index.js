@@ -19,7 +19,8 @@ __export(utils_exports, {
   loadImage: () => loadImage,
   parseUnits: () => parseUnits,
   solana: () => solana_exports,
-  ton: () => ton_exports
+  ton: () => ton_exports,
+  tron: () => tron_exports
 });
 
 // src/utils/units.ts
@@ -119,8 +120,13 @@ __export(solana_exports, {
   createTransaction: () => createTransaction,
   decodeTransfer: () => decodeTransfer,
   getAccountInfo: () => getAccountInfo,
+  getBalance: () => getBalance,
+  getBlockTime: () => getBlockTime,
+  getGasFee: () => getGasFee,
   getParsedTransaction: () => getParsedTransaction,
   getSignaturesForAddress: () => getSignaturesForAddress,
+  getTokenIcon: () => getTokenIcon,
+  getTokenInfo: () => getTokenInfo,
   getTransfers: () => getTransfers,
   hasATA: () => hasATA,
   sendTransaction: () => sendTransaction,
@@ -670,13 +676,101 @@ async function sendTransaction({
   return signature;
 }
 
+// src/utils/solana/getBalance.ts
+import { PublicKey as PublicKey6 } from "@solana/web3.js";
+import {
+  getAssociatedTokenAddressSync as getAssociatedTokenAddressSync2,
+  getAccount,
+  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID5,
+  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID4,
+  ASSOCIATED_TOKEN_PROGRAM_ID as ASSOCIATED_TOKEN_PROGRAM_ID3
+} from "@solana/spl-token";
+async function getBalance(connection, {
+  address,
+  tokenAddress,
+  tokenProgram
+}) {
+  if (tokenAddress) {
+    const programId = tokenProgram === TOKEN_2022_PROGRAM_ID4.toString() ? TOKEN_2022_PROGRAM_ID4 : TOKEN_PROGRAM_ID5;
+    const ownerATA = getAssociatedTokenAddressSync2(
+      new PublicKey6(tokenAddress),
+      new PublicKey6(address),
+      false,
+      programId,
+      ASSOCIATED_TOKEN_PROGRAM_ID3
+    );
+    const account = await getAccount(
+      connection,
+      ownerATA,
+      void 0,
+      programId
+    );
+    return String(account.amount);
+  } else {
+    const balance = await connection.getBalance(new PublicKey6(address));
+    return String(balance);
+  }
+}
+
+// src/utils/solana/getBlockTime.ts
+function getBlockTime(parsedTransactionWithMeta) {
+  return parsedTransactionWithMeta.blockTime;
+}
+
+// src/utils/solana/getGasFee.ts
+function getGasFee(parsedTransactionWithMeta) {
+  return (parsedTransactionWithMeta.meta?.fee ?? 0).toString();
+}
+
+// src/utils/solana/getTokenInfo.ts
+async function getTokenIcon(address) {
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/solana/contract/${address}`
+  );
+  const result = await res.json();
+  const url = result.image.small;
+  const blob = await loadImage(url);
+  return {
+    blob,
+    url
+  };
+}
+async function getTokenInfo({ address }) {
+  const res = await fetch(
+    `https://lite-api.jup.ag/tokens/v2/search?query=${address}`
+  );
+  const result = await res.json();
+  if (result.length === 0) {
+    throw new Error("message.token_not_found", {
+      cause: `Token ${address} not found`
+    });
+  }
+  const icon = await getTokenIcon(address);
+  return {
+    address: result[0].id,
+    name: result[0].name,
+    symbol: result[0].symbol,
+    decimals: result[0].decimals,
+    icon: icon.url,
+    icon_file: icon.blob ? new File([icon.blob], result[0].name, {
+      type: icon.blob.type
+    }) : null,
+    usdPrice: String(result[0].usdPrice),
+    tokenProgram: result[0].tokenProgram
+  };
+}
+
 // src/utils/ton/index.ts
 var ton_exports = {};
 __export(ton_exports, {
   createTransferBody: () => createTransferBody,
   createWalletContractV5R1: () => createWalletContractV5R1,
+  getBalance: () => getBalance2,
+  getBlockTime: () => getBlockTime2,
+  getGasFee: () => getGasFee2,
   getJettonWalletAddress: () => getJettonWalletAddress,
   getMessageHash: () => getMessageHash,
+  getTokenInfo: () => getTokenInfo2,
   getTransfer: () => getTransfer,
   sendTransaction: () => sendTransaction2,
   waitForTransaction: () => waitForTransaction2
@@ -985,12 +1079,120 @@ async function getTransfer({
   return null;
 }
 
+// src/utils/ton/getBalance.ts
+import TonWeb6 from "tonweb";
+var getBalance2 = async ({
+  provider,
+  tokenAddress,
+  address
+}) => {
+  const tonweb = new TonWeb6(provider ?? new TonWeb6.HttpProvider());
+  if (tokenAddress) {
+    const jettonWalletAddress = await getJettonWalletAddress({
+      minterAddress: tokenAddress,
+      ownerAddress: address
+    });
+    const jettonWallet = new TonWeb6.token.jetton.JettonWallet(tonweb.provider, {
+      address: jettonWalletAddress
+    });
+    const data = await jettonWallet.getData();
+    return data.balance.toString();
+  } else {
+    const balance = await tonweb.getBalance(address);
+    return balance;
+  }
+};
+
+// src/utils/ton/getBlockTime.ts
+function getBlockTime2(transaction) {
+  return transaction.now;
+}
+
+// src/utils/ton/getGasFee.ts
+function getGasFee2(transaction) {
+  let gasFee = 0n;
+  let forwardFee = 0n;
+  if (transaction.description.type === "generic") {
+    const compute = transaction.description.computePhase;
+    if (compute && compute.type === "vm") {
+      gasFee = BigInt(compute.gasUsed ?? 0);
+    }
+    const action = transaction.description.actionPhase;
+    if (action) {
+      forwardFee = BigInt(action.totalFwdFees ?? 0);
+    }
+  }
+  const totalFee = gasFee + forwardFee;
+  return totalFee.toString();
+}
+
+// src/utils/ton/getTokenInfo.ts
+import { Address as Address5 } from "@ton/ton";
+async function getTokenInfo2({ address }) {
+  if (address === "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs") {
+    const res = await fetch(`https://tonapi.io/v2/jettons/${address}`);
+    const data = await res.json();
+    if (data.error) {
+      throw new Error("message.token_not_found", {
+        cause: `Token ${address} not found`
+      });
+    }
+    const blob = await loadImage(data.metadata.image);
+    return {
+      name: data.metadata.name,
+      symbol: data.metadata.symbol,
+      decimals: Number(data.metadata.decimals),
+      address: Address5.parse(address).toString({
+        urlSafe: true,
+        bounceable: true
+      }),
+      icon: data.metadata.image,
+      icon_file: blob ? new File([blob], data.metadata.symbol.toLowerCase(), {
+        type: blob.type
+      }) : void 0,
+      tokenProgram: void 0,
+      usdPrice: "1"
+    };
+  } else {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/coins/ton/contract/${address}`
+    );
+    const data = await res.json();
+    if (data.error) {
+      throw new Error("message.token_not_found", {
+        cause: `Token ${address} not found`
+      });
+    }
+    const blob = await loadImage(data.image.small);
+    return {
+      name: data.name,
+      symbol: data.symbol,
+      decimals: data.detail_platforms["the-open-network"].decimal_place,
+      address: Address5.parse(
+        data.detail_platforms["the-open-network"].contract_address
+      ).toString({
+        urlSafe: true,
+        bounceable: true
+      }),
+      icon: data.image.small,
+      icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
+      tokenProgram: void 0,
+      usdPrice: data.market_data.low_24h.usd.toString()
+    };
+  }
+}
+
 // src/utils/evm/index.ts
 var evm_exports = {};
 __export(evm_exports, {
   estimateFee: () => estimateFee,
+  getBalance: () => getBalance3,
+  getBlockTime: () => getBlockTime3,
+  getGasFee: () => getGasFee3,
+  getTokenInfo: () => getTokenInfo5,
   getTransactions: () => getTransactions,
   getTransfer: () => getTransfer2,
+  sendTransaction: () => sendTransaction3,
   waitForTransaction: () => waitForTransaction3
 });
 
@@ -1157,11 +1359,229 @@ async function getTransfer2({
   return null;
 }
 
+// src/utils/evm/getBalance.ts
+import { Contract as Contract2 } from "ethers";
+async function getBalance3(provider, {
+  address,
+  tokenAddress
+}) {
+  if (tokenAddress) {
+    const contract = new Contract2(tokenAddress, ERC20_ABI, provider);
+    const balance = await contract.balanceOf(address);
+    return String(balance);
+  } else {
+    const balance = await provider.getBalance(address);
+    return String(balance);
+  }
+}
+
+// src/utils/evm/getBlockTime.ts
+async function getBlockTime3({
+  provider,
+  receipt
+}) {
+  const block = await provider.getBlock(receipt.blockNumber);
+  return block.timestamp;
+}
+
+// src/utils/evm/getGasFee.ts
+function getGasFee3(receipt) {
+  return (receipt.gasUsed * receipt.gasPrice).toString();
+}
+
+// src/utils/evm/getTokenInfo/ethereum.ts
+import { Contract as Contract3, getAddress } from "ethers";
+async function getTokenIcon2(address) {
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
+  );
+  const result = await res.json();
+  const url = result.image.small;
+  const blob = await loadImage(url);
+  return {
+    blob,
+    url
+  };
+}
+async function getTokenPrice(address) {
+  let usdPrice = null;
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
+    );
+    const data = await res.json();
+    const tokenData = data[address.toLowerCase()];
+    if (tokenData && tokenData.usd) {
+      usdPrice = tokenData.usd.toString();
+    }
+    return usdPrice;
+  } catch (error) {
+    console.error("Price API error:", error);
+  }
+  return usdPrice;
+}
+async function getTokenInfo3({
+  provider,
+  address
+}) {
+  const contract = new Contract3(address, ERC20_ABI, provider);
+  const name = await contract.name();
+  const symbol = await contract.symbol();
+  const decimals = await contract.decimals();
+  if (!name || !symbol || !decimals) {
+    throw new Error("message.token_not_found");
+  }
+  const icon = await getTokenIcon2(address);
+  const usdPrice = await getTokenPrice(address);
+  return {
+    // return EIP-55 address
+    address: getAddress(await contract.getAddress()),
+    name,
+    symbol,
+    decimals: Number(decimals),
+    icon: icon.url,
+    icon_file: icon.blob ? new File([icon.blob], name, {
+      type: icon.blob.type
+    }) : null,
+    usdPrice
+  };
+}
+
+// src/utils/evm/getTokenInfo/bsc.ts
+import { Contract as Contract4, getAddress as getAddress2 } from "ethers";
+async function getTokenIcon3(address) {
+  const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${getAddress2(
+    address
+  )}/logo.png`;
+  const blob = await loadImage(url);
+  return {
+    blob,
+    url
+  };
+}
+async function getTokenPrice2(address) {
+  let usdPrice = null;
+  try {
+    const res = await fetch(
+      `https://api.dexscreener.com/latest/dex/search?q=${address}`
+    );
+    const data = await res.json();
+    if (data.pairs && data.pairs.length > 0) {
+      const mainPair = data.pairs.sort(
+        (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
+      )[0];
+      usdPrice = mainPair.priceUsd ?? null;
+    }
+    return usdPrice;
+  } catch (error) {
+    console.error("Price API error:", error);
+  }
+  return usdPrice;
+}
+async function getTokenInfo4({
+  provider,
+  address
+}) {
+  const contract = new Contract4(address, ERC20_ABI, provider);
+  const name = await contract.name();
+  const symbol = await contract.symbol();
+  const decimals = await contract.decimals();
+  if (!name || !symbol || !decimals) {
+    throw new Error("message.token_not_found");
+  }
+  const icon = await getTokenIcon3(address);
+  const usdPrice = await getTokenPrice2(address);
+  return {
+    // return EIP-55 address
+    address: getAddress2(await contract.getAddress()),
+    name,
+    symbol,
+    decimals: Number(decimals),
+    icon: icon.url,
+    icon_file: icon.blob ? new File([icon.blob], name, {
+      type: icon.blob.type
+    }) : null,
+    usdPrice
+  };
+}
+
+// src/utils/evm/getTokenInfo/index.ts
+var getTokenInfo5 = {
+  ethereum: getTokenInfo3,
+  bsc: getTokenInfo4
+};
+
+// src/utils/evm/sendTransaction.ts
+import { Wallet, Contract as Contract5 } from "ethers";
+async function sendTransaction3({
+  privateKey,
+  provider,
+  destination,
+  token_address,
+  amount
+}) {
+  if (!provider) {
+    throw new Error("Provider is required");
+  }
+  const signer = new Wallet(privateKey, provider);
+  let tx;
+  if (!token_address) {
+    tx = await signer.sendTransaction({
+      to: destination,
+      value: amount
+    });
+  } else {
+    const contract = new Contract5(
+      token_address,
+      [
+        "function transfer(address to, uint256 amount) public returns (bool)"
+      ],
+      signer
+    );
+    if (!contract.transfer) {
+      throw new Error(`Token contract not found: ${token_address}`);
+    }
+    tx = await contract.transfer(destination, amount);
+  }
+  await tx.wait();
+  return tx.hash;
+}
+
+// src/utils/tron/index.ts
+var tron_exports = {};
+__export(tron_exports, {
+  getTokenInfo: () => getTokenInfo6
+});
+
+// src/utils/tron/getTokenInfo.ts
+async function getTokenInfo6({ address }) {
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/coins/tron/contract/${address}`
+  );
+  const data = await res.json();
+  if (data.error) {
+    throw new Error("message.token_not_found", {
+      cause: `Token ${address} not found`
+    });
+  }
+  const blob = await loadImage(data.image.small);
+  return {
+    name: data.name,
+    symbol: data.symbol,
+    decimals: data.detail_platforms["tron"].decimal_place,
+    address: data.detail_platforms["tron"].contract_address,
+    icon: data.image.small,
+    icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
+    tokenProgram: void 0,
+    usdPrice: data.market_data.low_24h.usd.toString()
+  };
+}
+
 // src/KeyVaultService/index.ts
-import { Wallet } from "ethers";
+import { Wallet as Wallet2 } from "ethers";
 import { mnemonicNew, mnemonicToWalletKey } from "@ton/crypto";
 import { WalletContractV5R1 as WalletContractV5R12 } from "@ton/ton";
-import TonWeb6 from "tonweb";
+import TonWeb7 from "tonweb";
 
 // src/algorithm/AES256GCM.ts
 import crypto from "crypto";
@@ -1223,7 +1643,7 @@ var KeyVaultService = class extends AES256GCM {
   get evm() {
     return {
       generate: () => {
-        const wallet = Wallet.createRandom();
+        const wallet = Wallet2.createRandom();
         const encryptedPrivateKey = this.encrypt(wallet.privateKey);
         return {
           address: wallet.address,
@@ -1233,7 +1653,7 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        return new Wallet(decryptedHex);
+        return new Wallet2(decryptedHex);
       }
     };
   }
@@ -1256,7 +1676,7 @@ var KeyVaultService = class extends AES256GCM {
       },
       recover: (encryptedPrivateKey) => {
         const decryptedHex = this.decrypt(encryptedPrivateKey);
-        const keyPair = TonWeb6.utils.nacl.sign.keyPair.fromSecretKey(
+        const keyPair = TonWeb7.utils.nacl.sign.keyPair.fromSecretKey(
           Buffer.from(decryptedHex, "hex")
         );
         const publicKey = Buffer.from(keyPair.publicKey);
@@ -1275,86 +1695,8 @@ var KeyVaultService = class extends AES256GCM {
 };
 
 // src/getBalance/index.ts
-import { JsonRpcProvider as JsonRpcProvider3 } from "ethers";
+import { JsonRpcProvider as JsonRpcProvider6 } from "ethers";
 import TonWeb8 from "tonweb";
-
-// src/getBalance/solana.ts
-import { PublicKey as PublicKey6 } from "@solana/web3.js";
-import {
-  getAssociatedTokenAddressSync as getAssociatedTokenAddressSync2,
-  getAccount,
-  TOKEN_PROGRAM_ID as TOKEN_PROGRAM_ID5,
-  TOKEN_2022_PROGRAM_ID as TOKEN_2022_PROGRAM_ID4,
-  ASSOCIATED_TOKEN_PROGRAM_ID as ASSOCIATED_TOKEN_PROGRAM_ID3
-} from "@solana/spl-token";
-async function getBalance(connection, {
-  address,
-  tokenAddress,
-  tokenProgram
-}) {
-  if (tokenAddress) {
-    const programId = tokenProgram === TOKEN_2022_PROGRAM_ID4.toString() ? TOKEN_2022_PROGRAM_ID4 : TOKEN_PROGRAM_ID5;
-    const ownerATA = getAssociatedTokenAddressSync2(
-      new PublicKey6(tokenAddress),
-      new PublicKey6(address),
-      false,
-      programId,
-      ASSOCIATED_TOKEN_PROGRAM_ID3
-    );
-    const account = await getAccount(
-      connection,
-      ownerATA,
-      void 0,
-      programId
-    );
-    return String(account.amount);
-  } else {
-    const balance = await connection.getBalance(new PublicKey6(address));
-    return String(balance);
-  }
-}
-
-// src/getBalance/evm.ts
-import { Contract as Contract2 } from "ethers";
-async function getBalance2(provider, {
-  address,
-  tokenAddress
-}) {
-  if (tokenAddress) {
-    const contract = new Contract2(tokenAddress, ERC20_ABI, provider);
-    const balance = await contract.balanceOf(address);
-    return String(balance);
-  } else {
-    const balance = await provider.getBalance(address);
-    return String(balance);
-  }
-}
-
-// src/getBalance/ton.ts
-import TonWeb7 from "tonweb";
-var getBalance3 = async ({
-  provider,
-  tokenAddress,
-  address
-}) => {
-  const tonweb = new TonWeb7(provider ?? new TonWeb7.HttpProvider());
-  if (tokenAddress) {
-    const jettonWalletAddress = await utils_exports.ton.getJettonWalletAddress(
-      tokenAddress,
-      address
-    );
-    const jettonWallet = new TonWeb7.token.jetton.JettonWallet(tonweb.provider, {
-      address: jettonWalletAddress
-    });
-    const data = await jettonWallet.getData();
-    return data.balance.toString();
-  } else {
-    const balance = await tonweb.getBalance(address);
-    return balance;
-  }
-};
-
-// src/getBalance/index.ts
 function getBalance4({
   network,
   provider,
@@ -1369,7 +1711,7 @@ function getBalance4({
       if (!connection) {
         throw new Error("Connection is required for SOLANA");
       }
-      return await getBalance(connection, {
+      return await solana_exports.getBalance(connection, {
         address,
         tokenAddress,
         tokenProgram
@@ -1378,10 +1720,10 @@ function getBalance4({
       if (!provider) {
         throw new Error("Provider is required for BSC or ETHEREUM");
       }
-      if (!(provider instanceof JsonRpcProvider3)) {
+      if (!(provider instanceof JsonRpcProvider6)) {
         throw new Error("Provider must be an instance of JsonRpcProvider");
       }
-      return await getBalance2(provider, {
+      return await evm_exports.getBalance(provider, {
         address,
         tokenAddress
       });
@@ -1392,7 +1734,7 @@ function getBalance4({
       if (!(provider instanceof TonWeb8.HttpProvider)) {
         throw new Error("Provider must be an instance of HttpProvider");
       }
-      return await getBalance3({
+      return await ton_exports.getBalance({
         provider,
         address,
         tokenAddress
@@ -1402,242 +1744,8 @@ function getBalance4({
   };
 }
 
-// src/getTokenInfo/ethereum.ts
-import { Contract as Contract3, getAddress } from "ethers";
-async function getTokenIcon(address) {
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`
-  );
-  const result = await res.json();
-  const url = result.image.small;
-  const blob = await loadImage(url);
-  return {
-    blob,
-    url
-  };
-}
-async function getTokenPrice(address) {
-  let usdPrice = null;
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
-    );
-    const data = await res.json();
-    const tokenData = data[address.toLowerCase()];
-    if (tokenData && tokenData.usd) {
-      usdPrice = tokenData.usd.toString();
-    }
-    return usdPrice;
-  } catch (error) {
-    console.error("Price API error:", error);
-  }
-  return usdPrice;
-}
-async function getTokenInfo({
-  provider,
-  address
-}) {
-  const contract = new Contract3(address, ERC20_ABI, provider);
-  const name = await contract.name();
-  const symbol = await contract.symbol();
-  const decimals = await contract.decimals();
-  if (!name || !symbol || !decimals) {
-    throw new Error("message.token_not_found");
-  }
-  const icon = await getTokenIcon(address);
-  const usdPrice = await getTokenPrice(address);
-  return {
-    // return EIP-55 address
-    address: getAddress(await contract.getAddress()),
-    name,
-    symbol,
-    decimals: Number(decimals),
-    icon: icon.url,
-    icon_file: icon.blob ? new File([icon.blob], name, {
-      type: icon.blob.type
-    }) : null,
-    usdPrice
-  };
-}
-
-// src/getTokenInfo/bsc.ts
-import { Contract as Contract4, getAddress as getAddress2 } from "ethers";
-async function getTokenIcon2(address) {
-  const url = `https://assets.trustwalletapp.com/blockchains/smartchain/assets/${getAddress2(
-    address
-  )}/logo.png`;
-  const blob = await loadImage(url);
-  return {
-    blob,
-    url
-  };
-}
-async function getTokenPrice2(address) {
-  let usdPrice = null;
-  try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/search?q=${address}`
-    );
-    const data = await res.json();
-    if (data.pairs && data.pairs.length > 0) {
-      const mainPair = data.pairs.sort(
-        (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
-      )[0];
-      usdPrice = mainPair.priceUsd ?? null;
-    }
-    return usdPrice;
-  } catch (error) {
-    console.error("Price API error:", error);
-  }
-  return usdPrice;
-}
-async function getTokenInfo2({
-  provider,
-  address
-}) {
-  const contract = new Contract4(address, ERC20_ABI, provider);
-  const name = await contract.name();
-  const symbol = await contract.symbol();
-  const decimals = await contract.decimals();
-  if (!name || !symbol || !decimals) {
-    throw new Error("message.token_not_found");
-  }
-  const icon = await getTokenIcon2(address);
-  const usdPrice = await getTokenPrice2(address);
-  return {
-    // return EIP-55 address
-    address: getAddress2(await contract.getAddress()),
-    name,
-    symbol,
-    decimals: Number(decimals),
-    icon: icon.url,
-    icon_file: icon.blob ? new File([icon.blob], name, {
-      type: icon.blob.type
-    }) : null,
-    usdPrice
-  };
-}
-
-// src/getTokenInfo/solana.ts
-async function getTokenIcon3(address) {
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/solana/contract/${address}`
-  );
-  const result = await res.json();
-  const url = result.image.small;
-  const blob = await loadImage(url);
-  return {
-    blob,
-    url
-  };
-}
-async function getTokenInfo3({ address }) {
-  const res = await fetch(
-    `https://lite-api.jup.ag/tokens/v2/search?query=${address}`
-  );
-  const result = await res.json();
-  if (result.length === 0) {
-    throw new Error("message.token_not_found", {
-      cause: `Token ${address} not found`
-    });
-  }
-  const icon = await getTokenIcon3(address);
-  return {
-    address: result[0].id,
-    name: result[0].name,
-    symbol: result[0].symbol,
-    decimals: result[0].decimals,
-    icon: icon.url,
-    icon_file: icon.blob ? new File([icon.blob], result[0].name, {
-      type: icon.blob.type
-    }) : null,
-    usdPrice: result[0].usdPrice,
-    tokenProgram: result[0].tokenProgram
-  };
-}
-
-// src/getTokenInfo/ton.ts
-import { Address as Address5 } from "@ton/ton";
-async function getTokenInfo4({ address }) {
-  if (address === "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs") {
-    const res = await fetch(`https://tonapi.io/v2/jettons/${address}`);
-    const data = await res.json();
-    if (data.error) {
-      throw new Error("message.token_not_found", {
-        cause: `Token ${address} not found`
-      });
-    }
-    const blob = await loadImage(data.metadata.image);
-    return {
-      name: data.metadata.name,
-      symbol: data.metadata.symbol,
-      decimals: Number(data.metadata.decimals),
-      address: Address5.parse(address).toString({
-        urlSafe: true,
-        bounceable: true
-      }),
-      icon: data.metadata.image,
-      icon_file: blob ? new File([blob], data.metadata.symbol.toLowerCase(), {
-        type: blob.type
-      }) : void 0,
-      tokenProgram: void 0,
-      usdPrice: "1"
-    };
-  } else {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/ton/contract/${address}`
-    );
-    const data = await res.json();
-    if (data.error) {
-      throw new Error("message.token_not_found", {
-        cause: `Token ${address} not found`
-      });
-    }
-    const blob = await loadImage(data.image.small);
-    return {
-      name: data.name,
-      symbol: data.symbol,
-      decimals: data.detail_platforms["the-open-network"].decimal_place,
-      address: Address5.parse(
-        data.detail_platforms["the-open-network"].contract_address
-      ).toString({
-        urlSafe: true,
-        bounceable: true
-      }),
-      icon: data.image.small,
-      icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
-      tokenProgram: void 0,
-      usdPrice: data.market_data.low_24h.usd.toString()
-    };
-  }
-}
-
-// src/getTokenInfo/tron.ts
-async function getTokenInfo5({ address }) {
-  const res = await fetch(
-    `https://api.coingecko.com/api/v3/coins/tron/contract/${address}`
-  );
-  const data = await res.json();
-  if (data.error) {
-    throw new Error("message.token_not_found", {
-      cause: `Token ${address} not found`
-    });
-  }
-  const blob = await loadImage(data.image.small);
-  return {
-    name: data.name,
-    symbol: data.symbol,
-    decimals: data.detail_platforms["tron"].decimal_place,
-    address: data.detail_platforms["tron"].contract_address,
-    icon: data.image.small,
-    icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
-    tokenProgram: void 0,
-    usdPrice: data.market_data.low_24h.usd.toString()
-  };
-}
-
 // src/getTokenInfo/index.ts
-function getTokenInfo6({
+function getTokenInfo7({
   network,
   provider
 }) {
@@ -1646,46 +1754,18 @@ function getTokenInfo6({
       if (!provider) {
         throw new Error("Provider is required for ETHEREUM");
       }
-      return await getTokenInfo({ provider, address });
+      return await evm_exports.getTokenInfo.ethereum({ provider, address });
     } else if (network === NETWORKS.BSC) {
-      return await getTokenInfo2({ provider, address });
+      return await evm_exports.getTokenInfo.bsc({ provider, address });
     } else if (network === NETWORKS.SOLANA) {
-      return await getTokenInfo3({ address });
+      return await solana_exports.getTokenInfo({ address });
     } else if (network === NETWORKS.TON) {
-      return await getTokenInfo4({ address });
+      return await ton_exports.getTokenInfo({ address });
     } else if (network === NETWORKS.TRON) {
-      return await getTokenInfo5({ address });
+      return await tron_exports.getTokenInfo({ address });
     }
     throw new Error(`Network ${network} not supported`);
   };
-}
-
-// src/getGasFee/solana.ts
-function getGasFee(parsedTransactionWithMeta) {
-  return (parsedTransactionWithMeta.meta?.fee ?? 0).toString();
-}
-
-// src/getGasFee/evm.ts
-function getGasFee2(receipt) {
-  return (receipt.gasUsed * receipt.gasPrice).toString();
-}
-
-// src/getGasFee/ton.ts
-function getGasFee3(transaction) {
-  let gasFee = 0n;
-  let forwardFee = 0n;
-  if (transaction.description.type === "generic") {
-    const compute = transaction.description.computePhase;
-    if (compute && compute.type === "vm") {
-      gasFee = BigInt(compute.gasUsed ?? 0);
-    }
-    const action = transaction.description.actionPhase;
-    if (action) {
-      forwardFee = BigInt(action.totalFwdFees ?? 0);
-    }
-  }
-  const totalFee = gasFee + forwardFee;
-  return totalFee.toString();
 }
 
 // src/getGasFee/index.ts
@@ -1697,32 +1777,13 @@ function getGasFee4({
     throw new Error("Receipt is required for EVM");
   }
   if (network === NETWORKS.SOLANA) {
-    return getGasFee(transaction);
+    return solana_exports.getGasFee(transaction);
   } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
-    return getGasFee2(transaction);
+    return evm_exports.getGasFee(transaction);
   } else if (network === NETWORKS.TON) {
-    return getGasFee3(transaction);
+    return ton_exports.getGasFee(transaction);
   }
   throw new Error(`Network ${network} not supported`);
-}
-
-// src/getBlockTime/solana.ts
-function getBlockTime(parsedTransactionWithMeta) {
-  return parsedTransactionWithMeta.blockTime;
-}
-
-// src/getBlockTime/evm.ts
-async function getBlockTime2({
-  provider,
-  receipt
-}) {
-  const block = await provider.getBlock(receipt.blockNumber);
-  return block.timestamp;
-}
-
-// src/getBlockTime/ton.ts
-function getBlockTime3(transaction) {
-  return transaction.now;
 }
 
 // src/getBlockTime/index.ts
@@ -1732,17 +1793,17 @@ async function getBlockTime4({
   transaction
 }) {
   if (network === NETWORKS.SOLANA) {
-    return getBlockTime(transaction);
+    return solana_exports.getBlockTime(transaction);
   } else if (network === NETWORKS.ETHEREUM || network === NETWORKS.BSC) {
     if (!provider) {
       throw new Error("Provider is required for EVM");
     }
-    return await getBlockTime2({
+    return await evm_exports.getBlockTime({
       provider,
       receipt: transaction
     });
   } else if (network === NETWORKS.TON) {
-    return getBlockTime3(transaction);
+    return ton_exports.getBlockTime(transaction);
   }
   throw new Error(`Network ${network} not supported`);
 }
@@ -1815,7 +1876,7 @@ export {
   getBalance4 as getBalance,
   getBlockTime4 as getBlockTime,
   getGasFee4 as getGasFee,
-  getTokenInfo6 as getTokenInfo,
+  getTokenInfo7 as getTokenInfo,
   getTransfer3 as getTransfer,
   solana,
   ton,

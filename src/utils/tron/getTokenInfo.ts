@@ -1,4 +1,4 @@
-import { loadImage } from '../utils';
+import { loadImage } from '../loaders';
 
 export async function getTokenInfo({ address }: { address: string }) {
   const res = await fetch(

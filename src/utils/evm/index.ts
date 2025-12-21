@@ -2,3 +2,8 @@ export * from './estimateFee';
 export * from './waitForTransaction';
 export * from './getTransactions';
 export * from './getTransfer';
+export * from './getBalance';
+export * from './getBlockTime';
+export * from './getGasFee';
+export * from './getTokenInfo';
+export * from './sendTransaction';

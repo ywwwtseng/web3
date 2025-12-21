@@ -1,9 +1,5 @@
 import { JsonRpcProvider } from 'ethers';
-import * as ethereum from './ethereum';
-import * as bsc from './bsc';
-import * as solana from './solana';
-import * as ton from './ton';
-import * as tron from './tron';
+import * as utils from '../utils';
 import { NETWORKS } from '../constants';
 
 export interface TokenInfo {
@@ -30,15 +26,15 @@ export function getTokenInfo({
         throw new Error('Provider is required for ETHEREUM');
       }
 
-      return await ethereum.getTokenInfo({ provider, address });
+      return await utils.evm.getTokenInfo.ethereum({ provider, address });
     } else if (network === NETWORKS.BSC) {
-      return await bsc.getTokenInfo({ provider, address });
+      return await utils.evm.getTokenInfo.bsc({ provider, address });
     } else if (network === NETWORKS.SOLANA) {
-      return await solana.getTokenInfo({ address });
+      return await utils.solana.getTokenInfo({ address });
     } else if (network === NETWORKS.TON) {
-      return await ton.getTokenInfo({ address });
+      return await utils.ton.getTokenInfo({ address });
     } else if (network === NETWORKS.TRON) {
-      return await tron.getTokenInfo({ address });
+      return await utils.tron.getTokenInfo({ address });
     }
 
     throw new Error(`Network ${network} not supported`);
