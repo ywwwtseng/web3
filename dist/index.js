@@ -755,7 +755,6 @@ async function getTokenInfo({ address }) {
     icon_file: icon.blob ? new File([icon.blob], result[0].name, {
       type: icon.blob.type
     }) : null,
-    usdPrice: String(result[0].usdPrice),
     tokenProgram: result[0].tokenProgram
   };
 }
@@ -1176,8 +1175,7 @@ async function getTokenInfo2({ address }) {
       }),
       icon: data.image.small,
       icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
-      tokenProgram: void 0,
-      usdPrice: data.market_data.low_24h.usd.toString()
+      tokenProgram: void 0
     };
   }
 }
@@ -1403,23 +1401,6 @@ async function getTokenIcon2(address) {
     url
   };
 }
-async function getTokenPrice(address) {
-  let usdPrice = null;
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
-    );
-    const data = await res.json();
-    const tokenData = data[address.toLowerCase()];
-    if (tokenData && tokenData.usd) {
-      usdPrice = tokenData.usd.toString();
-    }
-    return usdPrice;
-  } catch (error) {
-    console.error("Price API error:", error);
-  }
-  return usdPrice;
-}
 async function getTokenInfo3({
   provider,
   address
@@ -1432,7 +1413,6 @@ async function getTokenInfo3({
     throw new Error("message.token_not_found");
   }
   const icon = await getTokenIcon2(address);
-  const usdPrice = await getTokenPrice(address);
   return {
     // return EIP-55 address
     address: getAddress(await contract.getAddress()),
@@ -1442,8 +1422,7 @@ async function getTokenInfo3({
     icon: icon.url,
     icon_file: icon.blob ? new File([icon.blob], name, {
       type: icon.blob.type
-    }) : null,
-    usdPrice
+    }) : null
   };
 }
 
@@ -1459,25 +1438,6 @@ async function getTokenIcon3(address) {
     url
   };
 }
-async function getTokenPrice2(address) {
-  let usdPrice = null;
-  try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/search?q=${address}`
-    );
-    const data = await res.json();
-    if (data.pairs && data.pairs.length > 0) {
-      const mainPair = data.pairs.sort(
-        (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
-      )[0];
-      usdPrice = mainPair.priceUsd ?? null;
-    }
-    return usdPrice;
-  } catch (error) {
-    console.error("Price API error:", error);
-  }
-  return usdPrice;
-}
 async function getTokenInfo4({
   provider,
   address
@@ -1490,7 +1450,6 @@ async function getTokenInfo4({
     throw new Error("message.token_not_found");
   }
   const icon = await getTokenIcon3(address);
-  const usdPrice = await getTokenPrice2(address);
   return {
     // return EIP-55 address
     address: getAddress2(await contract.getAddress()),
@@ -1500,8 +1459,7 @@ async function getTokenInfo4({
     icon: icon.url,
     icon_file: icon.blob ? new File([icon.blob], name, {
       type: icon.blob.type
-    }) : null,
-    usdPrice
+    }) : null
   };
 }
 
@@ -1572,8 +1530,7 @@ async function getTokenInfo6({ address }) {
     address: data.detail_platforms["tron"].contract_address,
     icon: data.image.small,
     icon_file: blob ? new File([blob], data.symbol.toLowerCase(), { type: blob.type }) : void 0,
-    tokenProgram: void 0,
-    usdPrice: data.market_data.low_24h.usd.toString()
+    tokenProgram: void 0
   };
 }
 

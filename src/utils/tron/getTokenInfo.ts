@@ -20,11 +20,6 @@ export async function getTokenInfo({ address }: { address: string }) {
       small: string;
       large: string;
     };
-    market_data: {
-      low_24h: {
-        usd: number;
-      };
-    };
   };
 
   if (data.error) {
@@ -45,6 +40,5 @@ export async function getTokenInfo({ address }: { address: string }) {
       ? new File([blob], data.symbol.toLowerCase(), { type: blob.type })
       : undefined,
     tokenProgram: undefined,
-    usdPrice: data.market_data.low_24h.usd.toString(),
   };
 }

@@ -14,31 +14,6 @@ export async function getTokenIcon(address: string) {
   };
 }
 
-export async function getTokenPrice(address: string) {
-  let usdPrice: string | null = null;
-
-  try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/search?q=${address}`
-    );
-    const data = await res.json();
-
-    if (data.pairs && data.pairs.length > 0) {
-      const mainPair = data.pairs.sort(
-        (a: any, b: any) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0)
-      )[0];
-
-      usdPrice = mainPair.priceUsd ?? null;
-    }
-
-    return usdPrice;
-  } catch (error) {
-    console.error('Price API error:', error);
-  }
-
-  return usdPrice;
-}
-
 export async function getTokenInfo({
   provider,
   address,
@@ -55,7 +30,6 @@ export async function getTokenInfo({
   }
 
   const icon = await getTokenIcon(address);
-  const usdPrice = await getTokenPrice(address);
 
   return {
     // return EIP-55 address
@@ -69,6 +43,5 @@ export async function getTokenInfo({
           type: icon.blob.type,
         })
       : null,
-    usdPrice,
   };
 }

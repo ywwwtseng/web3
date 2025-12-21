@@ -128,7 +128,6 @@ declare function getTokenInfo$6({ address }: {
     decimals: number;
     icon: any;
     icon_file: File;
-    usdPrice: string;
     tokenProgram: string;
 }>;
 
@@ -216,6 +215,15 @@ declare function getTokenInfo$5({ address }: {
     icon_file: File;
     tokenProgram: any;
     usdPrice: string;
+} | {
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+    icon: string;
+    icon_file: File;
+    tokenProgram: any;
+    usdPrice?: undefined;
 }>;
 
 declare const index$3_createTransferBody: typeof createTransferBody;
@@ -356,7 +364,6 @@ declare function getTokenInfo$4({ provider, address, }: {
     decimals: number;
     icon: any;
     icon_file: File;
-    usdPrice: string;
 }>;
 
 declare function getTokenInfo$3({ provider, address, }: {
@@ -369,7 +376,6 @@ declare function getTokenInfo$3({ provider, address, }: {
     decimals: number;
     icon: string;
     icon_file: File;
-    usdPrice: string;
 }>;
 
 declare const getTokenInfo$2: {
@@ -406,7 +412,6 @@ declare function getTokenInfo$1({ address }: {
     icon: string;
     icon_file: File;
     tokenProgram: any;
-    usdPrice: string;
 }>;
 
 declare namespace index$1 {
@@ -478,7 +483,6 @@ interface TokenInfo {
     icon: string;
     icon_file?: File;
     tokenProgram?: string;
-    usdPrice: string | null;
 }
 declare function getTokenInfo({ network, provider, }: {
     network: string;

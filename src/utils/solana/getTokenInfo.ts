@@ -25,7 +25,6 @@ export async function getTokenInfo({ address }: { address: string }) {
     symbol: string;
     decimals: number;
     icon: string;
-    usdPrice: number;
     tokenProgram: string;
   }[];
 
@@ -48,7 +47,6 @@ export async function getTokenInfo({ address }: { address: string }) {
           type: icon.blob.type,
         })
       : null,
-    usdPrice: String(result[0].usdPrice),
     tokenProgram: result[0].tokenProgram,
   };
 }

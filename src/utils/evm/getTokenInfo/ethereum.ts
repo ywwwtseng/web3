@@ -16,27 +16,6 @@ export async function getTokenIcon(address: string) {
   };
 }
 
-export async function getTokenPrice(address: string) {
-  let usdPrice: string | null = null;
-
-  try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=${address}&vs_currencies=usd`
-    );
-    const data = await res.json();
-    const tokenData = data[address.toLowerCase()];
-    if (tokenData && tokenData.usd) {
-      usdPrice = tokenData.usd.toString();
-    }
-
-    return usdPrice;
-  } catch (error) {
-    console.error('Price API error:', error);
-  }
-
-  return usdPrice;
-}
-
 export async function getTokenInfo({
   provider,
   address,
@@ -53,7 +32,6 @@ export async function getTokenInfo({
   }
 
   const icon = await getTokenIcon(address);
-  const usdPrice = await getTokenPrice(address);
 
   return {
     // return EIP-55 address
@@ -67,6 +45,5 @@ export async function getTokenInfo({
           type: icon.blob.type,
         })
       : null,
-    usdPrice,
   };
 }

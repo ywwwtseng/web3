@@ -10,7 +10,6 @@ export interface TokenInfo {
   icon: string;
   icon_file?: File;
   tokenProgram?: string;
-  usdPrice: string | null;
 }
 
 export function getTokenInfo({
