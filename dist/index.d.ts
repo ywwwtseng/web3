@@ -17,10 +17,6 @@ declare function hex(value: string | number | bigint): string;
 
 declare function loadImage(url: string): Promise<Blob | null>;
 
-declare function getRpcUrl(network: string, options?: {
-    infuraApiKey?: string;
-}): string;
-
 declare class KeyPair {
     static from(secretKey: string | Uint8Array): Keypair;
     static generate(): Keypair;
@@ -419,12 +415,11 @@ declare namespace index$1 {
 }
 
 declare const index_formatUnits: typeof formatUnits;
-declare const index_getRpcUrl: typeof getRpcUrl;
 declare const index_hex: typeof hex;
 declare const index_loadImage: typeof loadImage;
 declare const index_parseUnits: typeof parseUnits;
 declare namespace index {
-  export { index$2 as evm, index_formatUnits as formatUnits, index_getRpcUrl as getRpcUrl, index_hex as hex, index_loadImage as loadImage, index_parseUnits as parseUnits, index$4 as solana, index$3 as ton, index$1 as tron };
+  export { index$2 as evm, index_formatUnits as formatUnits, index_hex as hex, index_loadImage as loadImage, index_parseUnits as parseUnits, index$4 as solana, index$3 as ton, index$1 as tron };
 }
 
 declare class AES256GCM {
@@ -491,9 +486,11 @@ declare function getTokenInfo({ network, provider, }: {
 
 declare const RPC_URL: {
     BSC: string;
+    BSC_TESTNET: string;
     SOLANA_DEV: string;
     SOLANA_MAIN: string;
     ETHEREUM_MAINNET: (key: string) => string;
+    SEPOLIA_TESTNET: (key: string) => string;
 };
 declare const NETWORKS: {
     SOLANA: string;

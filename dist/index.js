@@ -14,7 +14,6 @@ var utils_exports = {};
 __export(utils_exports, {
   evm: () => evm_exports,
   formatUnits: () => formatUnits,
-  getRpcUrl: () => getRpcUrl,
   hex: () => hex,
   loadImage: () => loadImage,
   parseUnits: () => parseUnits,
@@ -58,55 +57,6 @@ async function loadImage(url) {
     return blob;
   } catch (error) {
     return null;
-  }
-}
-
-// src/constants.ts
-var RPC_URL = {
-  BSC: "https://bsc-dataseed.binance.org",
-  SOLANA_DEV: "https://api.devnet.solana.com",
-  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
-  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`
-};
-var NETWORKS = {
-  SOLANA: "solana",
-  BSC: "bsc",
-  ETHEREUM: "ethereum",
-  TON: "ton",
-  TRON: "tron",
-  BTC: "bitcoin"
-};
-var BLOCK_TIME_MS = {
-  SOLANA: 400,
-  BSC: 750,
-  ETH: 12e3,
-  TON: 5e3,
-  TRON: 3e3,
-  BTC: 6e5
-};
-var NATIVE_TOKEN_POOL_PAIRS = {
-  SOLANA: "SOLUSDT",
-  BSC: "BNBUSDT",
-  ETH: "ETHUSDT",
-  TON: "TONUSDT",
-  TRON: "TRXUSDT",
-  BTC: "BTCUSDT"
-};
-
-// src/utils/rpc.ts
-function getRpcUrl(network, options = {}) {
-  switch (network) {
-    case NETWORKS.SOLANA:
-      return RPC_URL.SOLANA_DEV;
-    case NETWORKS.BSC:
-      return RPC_URL.BSC;
-    case NETWORKS.ETHEREUM:
-      if (!options.infuraApiKey) {
-        throw new Error("Infura API key is required");
-      }
-      return RPC_URL.ETHEREUM_MAINNET(options.infuraApiKey);
-    default:
-      throw new Error(`Network ${network} not supported`);
   }
 }
 
@@ -945,6 +895,7 @@ async function sendTransaction2({
   privateKey,
   destination,
   amount
+  // carryAllRemainingBalance = false,
 }) {
   const { contract, address } = await createWalletContractV5R1({
     client,
@@ -952,6 +903,7 @@ async function sendTransaction2({
   });
   const seqno = await contract.getSeqno();
   let transfer;
+  let sendMode = SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS;
   if (minterAddress) {
     const senderJettonWalletAddress = await getJettonWalletAddress({
       minterAddress,
@@ -961,7 +913,7 @@ async function sendTransaction2({
     transfer = contract.createTransfer({
       seqno,
       secretKey: Buffer.from(privateKey, "hex"),
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      sendMode,
       messages: [
         internal({
           to: Address4.parse(senderJettonWalletAddress),
@@ -981,10 +933,13 @@ async function sendTransaction2({
     transfer = contract.createTransfer({
       seqno,
       secretKey: Buffer.from(privateKey, "hex"),
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      sendMode,
       messages: [
         internal({
           to: Address4.parse(destination),
+          // value: carryAllRemainingBalance
+          //   ? BigInt(0) // 當 sendAllBalance 為 true 時，value 設為 0，由 SendMode 處理
+          //   : BigInt(amount),
           value: BigInt(amount)
         })
       ]
@@ -1265,6 +1220,40 @@ async function waitForTransaction3({
     }, refetchInterval);
   });
 }
+
+// src/constants.ts
+var RPC_URL = {
+  BSC: "https://bsc-dataseed.binance.org",
+  BSC_TESTNET: "https://bsc-testnet.publicnode.com",
+  SOLANA_DEV: "https://api.devnet.solana.com",
+  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
+  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`,
+  SEPOLIA_TESTNET: (key) => `https://sepolia.infura.io/v3/${key}`
+};
+var NETWORKS = {
+  SOLANA: "solana",
+  BSC: "bsc",
+  ETHEREUM: "ethereum",
+  TON: "ton",
+  TRON: "tron",
+  BTC: "bitcoin"
+};
+var BLOCK_TIME_MS = {
+  SOLANA: 400,
+  BSC: 750,
+  ETH: 12e3,
+  TON: 5e3,
+  TRON: 3e3,
+  BTC: 6e5
+};
+var NATIVE_TOKEN_POOL_PAIRS = {
+  SOLANA: "SOLUSDT",
+  BSC: "BNBUSDT",
+  ETH: "ETHUSDT",
+  TON: "TONUSDT",
+  TRON: "TRXUSDT",
+  BTC: "BTCUSDT"
+};
 
 // src/utils/evm/getTransactions.ts
 async function getTransactions({

@@ -19,12 +19,20 @@ export async function sendTransaction({
   privateKey,
   destination,
   amount,
+  // carryAllRemainingBalance = false,
 }: {
   client: TonClient;
   minterAddress?: string;
   privateKey: string;
   destination: string;
   amount: string;
+  /**
+   * 是否發送所有餘額（清空賬戶）
+   * - true: 使用 CARRY_ALL_REMAINING_BALANCE，發送所有剩餘餘額（會自動保留 gas 費用）
+   * - false: 發送指定金額
+   * 注意：當 carryAllRemainingBalance 為 true 時，amount 參數會被忽略
+   */
+  // carryAllRemainingBalance?: boolean;
 }) {
   const { contract, address } = await createWalletContractV5R1({
     client,
@@ -34,6 +42,14 @@ export async function sendTransaction({
   const seqno: number = await contract.getSeqno();
 
   let transfer: Cell;
+  let sendMode: number = SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS;
+
+  // 計算 SendMode
+  // if (carryAllRemainingBalance && !minterAddress) {
+  //   // 清空餘額模式：使用 CARRY_ALL_REMAINING_BALANCE
+  //   // 這會發送所有剩餘餘額，自動保留 gas 費用
+  //   sendMode = SendMode.CARRY_ALL_REMAINING_BALANCE;
+  // }
 
   if (minterAddress) {
     // 獲取發送者的 jetton wallet 地址（從這裡發送 jetton）
@@ -46,7 +62,7 @@ export async function sendTransaction({
     transfer = contract.createTransfer({
       seqno,
       secretKey: Buffer.from(privateKey, 'hex'),
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      sendMode,
       messages: [
         internal({
           to: Address.parse(senderJettonWalletAddress), // 發送到發送者的 jetton wallet
@@ -64,10 +80,13 @@ export async function sendTransaction({
     transfer = contract.createTransfer({
       seqno,
       secretKey: Buffer.from(privateKey, 'hex'),
-      sendMode: SendMode.PAY_GAS_SEPARATELY + SendMode.IGNORE_ERRORS,
+      sendMode,
       messages: [
         internal({
           to: Address.parse(destination),
+          // value: carryAllRemainingBalance
+          //   ? BigInt(0) // 當 sendAllBalance 為 true 時，value 設為 0，由 SendMode 處理
+          //   : BigInt(amount),
           value: BigInt(amount),
         }),
       ],
