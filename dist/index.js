@@ -1221,56 +1221,13 @@ async function waitForTransaction3({
   });
 }
 
-// src/constants.ts
-var RPC_URL = {
-  BSC: "https://bsc-dataseed.binance.org",
-  BSC_TESTNET: "https://bsc-testnet.publicnode.com",
-  SOLANA_DEV: "https://api.devnet.solana.com",
-  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
-  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`,
-  SEPOLIA_TESTNET: (key) => `https://sepolia.infura.io/v3/${key}`
-};
-var NETWORKS = {
-  SOLANA: "solana",
-  BSC: "bsc",
-  ETHEREUM: "ethereum",
-  TON: "ton",
-  TRON: "tron",
-  BTC: "bitcoin"
-};
-var BLOCK_TIME_MS = {
-  SOLANA: 400,
-  BSC: 750,
-  ETH: 12e3,
-  TON: 5e3,
-  TRON: 3e3,
-  BTC: 6e5
-};
-var NATIVE_TOKEN_POOL_PAIRS = {
-  SOLANA: "SOLUSDT",
-  BSC: "BNBUSDT",
-  ETH: "ETHUSDT",
-  TON: "TONUSDT",
-  TRON: "TRXUSDT",
-  BTC: "BTCUSDT"
-};
-
 // src/utils/evm/getTransactions.ts
 async function getTransactions({
-  noderealApiKey,
+  rpcUrl,
   address,
-  network,
   category = ["external", "20"],
   maxCount = 20
 }) {
-  let url;
-  if (network === NETWORKS.BSC) {
-    url = `https://bsc-mainnet.nodereal.io/v1/${noderealApiKey}`;
-  } else if (network === NETWORKS.ETHEREUM) {
-    url = `https://eth-mainnet.nodereal.io/v1/${noderealApiKey}`;
-  } else {
-    throw new Error(`Network ${network} not supported`);
-  }
   const body = {
     jsonrpc: "2.0",
     id: 1,
@@ -1284,7 +1241,7 @@ async function getTransactions({
       }
     ]
   };
-  const res = await fetch(url, {
+  const res = await fetch(rpcUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -1643,6 +1600,42 @@ var KeyVaultService = class extends AES256GCM {
 // src/getBalance/index.ts
 import { JsonRpcProvider as JsonRpcProvider6 } from "ethers";
 import TonWeb8 from "tonweb";
+
+// src/constants.ts
+var RPC_URL = {
+  BSC: "https://bsc-dataseed.binance.org",
+  BSC_TESTNET: "https://bsc-testnet.publicnode.com",
+  SOLANA_DEV: "https://api.devnet.solana.com",
+  SOLANA_MAIN: "https://api.mainnet-beta.solana.com",
+  ETHEREUM_MAINNET: (key) => `https://mainnet.infura.io/v3/${key}`,
+  SEPOLIA_TESTNET: (key) => `https://sepolia.infura.io/v3/${key}`
+};
+var NETWORKS = {
+  SOLANA: "solana",
+  BSC: "bsc",
+  ETHEREUM: "ethereum",
+  TON: "ton",
+  TRON: "tron",
+  BTC: "bitcoin"
+};
+var BLOCK_TIME_MS = {
+  SOLANA: 400,
+  BSC: 750,
+  ETH: 12e3,
+  TON: 5e3,
+  TRON: 3e3,
+  BTC: 6e5
+};
+var NATIVE_TOKEN_POOL_PAIRS = {
+  SOLANA: "SOLUSDT",
+  BSC: "BNBUSDT",
+  ETH: "ETHUSDT",
+  TON: "TONUSDT",
+  TRON: "TRXUSDT",
+  BTC: "BTCUSDT"
+};
+
+// src/getBalance/index.ts
 function getBalance4({
   network,
   provider,

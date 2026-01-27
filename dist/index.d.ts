@@ -325,9 +325,8 @@ interface GetTransactionsResponse {
     /** 查询结果 */
     result: TransactionResult;
 }
-declare function getTransactions({ noderealApiKey, address, network, category, maxCount, }: {
-    network: string;
-    noderealApiKey: string;
+declare function getTransactions({ rpcUrl, address, category, maxCount, }: {
+    rpcUrl: string;
     address: string;
     category?: ('external' | 'internal' | '20' | '721' | '1155')[];
     maxCount?: number;

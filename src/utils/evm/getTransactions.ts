@@ -1,6 +1,3 @@
-
-
-import { NETWORKS } from '../../constants';
 import { hex } from '../units';
 /**
  * 交易传输信息
@@ -86,27 +83,16 @@ export interface GetTransactionsResponse {
 }
 
 export async function getTransactions({
-  noderealApiKey,
+  rpcUrl,
   address,
-  network,
   category = ['external', '20'],
   maxCount = 20,
 }: {
-  network: string;
-  noderealApiKey: string;
+  rpcUrl: string;
   address: string;
   category?: ('external' | 'internal' | '20' | '721' | '1155')[];
   maxCount?: number;
 }) {
-  let url: string;
-  if (network === NETWORKS.BSC) {
-    url = `https://bsc-mainnet.nodereal.io/v1/${noderealApiKey}`;
-  } else if (network === NETWORKS.ETHEREUM) {
-    url = `https://eth-mainnet.nodereal.io/v1/${noderealApiKey}`;
-  } else {
-    throw new Error(`Network ${network} not supported`);
-  }
-
   const body = {
     jsonrpc: '2.0',
     id: 1,
@@ -121,7 +107,7 @@ export async function getTransactions({
     ],
   };
 
-  const res = await fetch(url, {
+  const res = await fetch(rpcUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

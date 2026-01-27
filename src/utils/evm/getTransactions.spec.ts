@@ -5,8 +5,7 @@ import { NETWORKS } from '../../constants';
 describe('getTransactions', () => {
   test('getTransactions', async () => {
     const transactions = await getTransactions({
-      network: NETWORKS.BSC,
-      noderealApiKey: process.env.NODE_REAL_API_KEY,
+      rpcUrl: `https://bsc-mainnet.nodereal.io/v1/${process.env.NODE_REAL_API_KEY}`,
       address: '0x723324C6EB42a8D417d43699D93Ad0Df6DE2479B',
       maxCount: 20,
     });
