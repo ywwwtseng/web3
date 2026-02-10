@@ -8,6 +8,7 @@ export * from './getTokenInfo';
 export * from './getGasFee';
 export * from './getBlockTime';
 export * from './getTransfer';
+export * from './prices';
 export * from './constants';
 export * from './types';
 export * from './abi';

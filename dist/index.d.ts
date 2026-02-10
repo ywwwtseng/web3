@@ -10,6 +10,7 @@ export { ton };
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import * as _ton_core from '@ton/core';
 import TonWeb from 'tonweb';
+import { InMemoryCache } from '@ywwwtseng/ywjs';
 
 declare function formatUnits(value: string | bigint, decimals: number): string;
 declare function parseUnits(value: string, decimals: number): bigint;
@@ -536,6 +537,14 @@ declare function getTransfer({ network, provider, connection, client, source, de
     destination: string;
 }): (hash: string) => Promise<Transfer>;
 
+declare class Prices extends InMemoryCache {
+    fetch({ network, tokenAddress, }: {
+        network: string;
+        tokenAddress?: string | null;
+    }): Promise<string>;
+}
+declare const prices: Prices;
+
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, index as utils };
+export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, prices, index as utils };
