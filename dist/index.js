@@ -6,7 +6,7 @@ var __export = (target, all) => {
 
 // src/index.ts
 import * as solana from "@solana/web3.js";
-import * as ethers from "ethers";
+import * as ethers2 from "ethers";
 import * as ton from "@ton/ton";
 
 // src/utils/index.ts
@@ -1805,6 +1805,28 @@ function getTransfer3({
   };
 }
 
+// src/getAddress/index.ts
+import { ethers } from "ethers";
+import { PublicKey as PublicKey7 } from "@solana/web3.js";
+import { Address as Address7 } from "@ton/ton";
+function getAddress3({
+  network,
+  address
+}) {
+  if (network === NETWORKS.SOLANA) {
+    const publicKey = new PublicKey7(address);
+    return publicKey.toBase58();
+  } else if (network === NETWORKS.BSC || network === NETWORKS.ETHEREUM) {
+    return ethers.getAddress(address);
+  } else if (network === NETWORKS.TON) {
+    return Address7.parse(address).toString({
+      urlSafe: true,
+      bounceable: false
+    });
+  }
+  throw new Error(`Network ${network} not supported`);
+}
+
 // src/prices/index.ts
 import { InMemoryCache } from "@ywwwtseng/ywjs";
 import BigNumber from "bignumber.js";
@@ -1883,7 +1905,8 @@ export {
   NATIVE_TOKEN_POOL_PAIRS,
   NETWORKS,
   RPC_URL,
-  ethers,
+  ethers2 as ethers,
+  getAddress3 as getAddress,
   getBalance4 as getBalance,
   getBlockTime4 as getBlockTime,
   getGasFee4 as getGasFee,

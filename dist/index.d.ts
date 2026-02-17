@@ -537,6 +537,11 @@ declare function getTransfer({ network, provider, connection, client, source, de
     destination: string;
 }): (hash: string) => Promise<Transfer>;
 
+declare function getAddress({ network, address, }: {
+    network: string;
+    address: string;
+}): string;
+
 declare class Prices extends InMemoryCache {
     fetch({ network, tokenAddress, }: {
         network: string;
@@ -547,4 +552,4 @@ declare const prices: Prices;
 
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, prices, index as utils };
+export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getAddress, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, prices, index as utils };
