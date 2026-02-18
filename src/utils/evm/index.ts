@@ -1,5 +1,6 @@
 export * from './estimateFee';
 export * from './waitForTransaction';
+export * from './getConfirmations';
 export * from './getTransactions';
 export * from './getTransfer';
 export * from './getBalance';

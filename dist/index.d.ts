@@ -247,6 +247,14 @@ declare function waitForTransaction({ provider, hash, refetchInterval, refetchLi
 }): Promise<TransactionReceipt | null>;
 
 /**
+ * 等待交易達到指定確認數（不自行輪詢，直接使用 provider.waitForTransaction）。
+ */
+declare function getConfirmations({ provider, hash, }: {
+    provider: JsonRpcProvider;
+    hash: string;
+}): Promise<number>;
+
+/**
  * 交易传输信息
  */
 interface TransactionTransfer {
@@ -391,11 +399,12 @@ type index$2_GetTransactionsResponse = GetTransactionsResponse;
 type index$2_TransactionResult = TransactionResult;
 type index$2_TransactionTransfer = TransactionTransfer;
 declare const index$2_estimateFee: typeof estimateFee;
+declare const index$2_getConfirmations: typeof getConfirmations;
 declare const index$2_getTransactions: typeof getTransactions;
 declare const index$2_sendTransaction: typeof sendTransaction;
 declare const index$2_waitForTransaction: typeof waitForTransaction;
 declare namespace index$2 {
-  export { type index$2_GetTransactionsResponse as GetTransactionsResponse, type index$2_TransactionResult as TransactionResult, type index$2_TransactionTransfer as TransactionTransfer, index$2_estimateFee as estimateFee, getBalance$1 as getBalance, getBlockTime$1 as getBlockTime, getGasFee$1 as getGasFee, getTokenInfo$2 as getTokenInfo, index$2_getTransactions as getTransactions, getTransfer$1 as getTransfer, index$2_sendTransaction as sendTransaction, index$2_waitForTransaction as waitForTransaction };
+  export { type index$2_GetTransactionsResponse as GetTransactionsResponse, type index$2_TransactionResult as TransactionResult, type index$2_TransactionTransfer as TransactionTransfer, index$2_estimateFee as estimateFee, getBalance$1 as getBalance, getBlockTime$1 as getBlockTime, index$2_getConfirmations as getConfirmations, getGasFee$1 as getGasFee, getTokenInfo$2 as getTokenInfo, index$2_getTransactions as getTransactions, getTransfer$1 as getTransfer, index$2_sendTransaction as sendTransaction, index$2_waitForTransaction as waitForTransaction };
 }
 
 declare function getTokenInfo$1({ address }: {
@@ -500,6 +509,14 @@ declare const NETWORKS: {
     TRON: string;
     BTC: string;
 };
+declare const CONFIRMATIONS: {
+    [NETWORKS.SOLANA]: number;
+    [NETWORKS.BSC]: number;
+    [NETWORKS.ETHEREUM]: number;
+    [NETWORKS.TON]: number;
+    [NETWORKS.TRON]: number;
+    [NETWORKS.BTC]: number;
+};
 declare const BLOCK_TIME_MS: {
     SOLANA: number;
     BSC: number;
@@ -552,4 +569,4 @@ declare const prices: Prices;
 
 declare const ERC20_ABI: string[];
 
-export { BLOCK_TIME_MS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getAddress, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, prices, index as utils };
+export { BLOCK_TIME_MS, CONFIRMATIONS, ERC20_ABI, KeyVaultService, NATIVE_TOKEN_POOL_PAIRS, NETWORKS, RPC_URL, type TokenInfo, type Transfer, getAddress, getBalance, getBlockTime, getGasFee, getTokenInfo, getTransfer, prices, index as utils };

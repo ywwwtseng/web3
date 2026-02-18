@@ -1141,6 +1141,7 @@ __export(evm_exports, {
   estimateFee: () => estimateFee,
   getBalance: () => getBalance3,
   getBlockTime: () => getBlockTime3,
+  getConfirmations: () => getConfirmations,
   getGasFee: () => getGasFee3,
   getTokenInfo: () => getTokenInfo5,
   getTransactions: () => getTransactions,
@@ -1219,6 +1220,23 @@ async function waitForTransaction3({
       }
     }, refetchInterval);
   });
+}
+
+// src/utils/evm/getConfirmations.ts
+async function getConfirmations({
+  provider,
+  hash
+}) {
+  try {
+    const receipt = await provider.getTransactionReceipt(hash);
+    if (!receipt) {
+      return 0;
+    }
+    const currentBlock = await provider.getBlockNumber();
+    return Number(currentBlock) - Number(receipt.blockNumber) + 1;
+  } catch {
+    return 0;
+  }
 }
 
 // src/utils/evm/getTransactions.ts
@@ -1618,6 +1636,14 @@ var NETWORKS = {
   TRON: "tron",
   BTC: "bitcoin"
 };
+var CONFIRMATIONS = {
+  [NETWORKS.SOLANA]: 0,
+  [NETWORKS.BSC]: 20,
+  [NETWORKS.ETHEREUM]: 12,
+  [NETWORKS.TON]: 0,
+  [NETWORKS.TRON]: 20,
+  [NETWORKS.BTC]: 6
+};
 var BLOCK_TIME_MS = {
   SOLANA: 400,
   BSC: 750,
@@ -1900,6 +1926,7 @@ var Prices = class extends InMemoryCache {
 var prices = new Prices();
 export {
   BLOCK_TIME_MS,
+  CONFIRMATIONS,
   ERC20_ABI,
   KeyVaultService,
   NATIVE_TOKEN_POOL_PAIRS,

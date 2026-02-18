@@ -16,6 +16,30 @@ export const NETWORKS = {
   BTC: 'bitcoin',
 };
 
+export const CONFIRMATIONS = {
+  [NETWORKS.SOLANA]: 0,
+  [NETWORKS.BSC]: 20,
+  [NETWORKS.ETHEREUM]: 12,
+  [NETWORKS.TON]: 0,
+  [NETWORKS.TRON]: 20,
+  [NETWORKS.BTC]: 6,
+};
+
+// import { ethers } from "ethers";
+
+// const provider = new ethers.JsonRpcProvider(RPC_URL);
+
+// const tx = await provider.getTransaction(txHash);
+// const receipt = await provider.getTransactionReceipt(txHash);
+
+// const currentBlock = await provider.getBlockNumber();
+
+// const confirmations = currentBlock - receipt.blockNumber + 1;
+
+// if (confirmations >= 12) {
+//   console.log("Safe to credit user");
+// }
+
 export const BLOCK_TIME_MS = {
   SOLANA: 400,
   BSC: 750,
